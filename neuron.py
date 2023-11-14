@@ -119,7 +119,7 @@ class Neuron:
         """
         # Get inputs
         if inputs is None:
-            inputs = np.array([neuron.output.item() for neuron in self.neuron_connections], dtype=np.float64)
+            inputs = np.array([neuron.output for neuron in self.neuron_connections], dtype=np.float64)
         else:
             inputs = np.array(inputs, dtype=np.float64)
 
@@ -272,7 +272,7 @@ class NeuralNetwork:
 
         return outputs
 
-    def reinforce(self, reward: float, neuron_importance=None):
+    def reinforce(self, reward: float):
         """
         perform reinforcement on the entire network.
         :param reward: the score to rate network, between -1 and 1
@@ -282,10 +282,10 @@ class NeuralNetwork:
         if neuron_importance is None:
             neuron_importance = np.full(len(self.output_neurons), 1 / len(self.output_neurons))
         for neuron in self.output_neurons:
-            neuron.train(reward, False, neuron_importance)
-        # trigger train functions on the output neurons with expected result as false, and by extension the backpropogation
+            neuron.train(reward, neuron_importance)
+        # trigger train functions on the output neurons with, and by extension the backpropogation
 
-    def train(self, X_train, y_train, update_connections, neuron_importance=None):
+    def train(self, X_train, y_train, update_connections):
         """
         Train the network based on expected input and output
 
@@ -296,18 +296,15 @@ class NeuralNetwork:
         :param neuron_importance: Array of how important each output_neuron's output is, should add up to 1, defaults to equal distrubution
         :return predicted output with X_train input
         """
-        # default importance
-        if neuron_importance is None:
-            neuron_importance = np.full(len(self.output_neurons), 1 / len(self.output_neurons))
-
         # make predictions
         output = self.propagate_input(X_train, update_connections)
 
         for i, neuron in enumerate(self.output_neurons):
             # Calculate Mean Squared Error (MSE) loss
-            loss = np.mean((y_train[i] - output[i]) ** 2)
-            neuron.train(loss, neuron_importance, output[i])
+            loss = np.mean(np.subtract(y_train[i], output[i]) ** 2)
+            neuron.train(loss, output[i])
         return output
+    # extra
 
     def save_model(self, file_path):
         """

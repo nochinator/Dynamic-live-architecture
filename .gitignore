@@ -1,5 +1,4 @@
 venv
-data.txt
 pong.py
 sample_model.pkl
 sample_model_loaded.pkl
