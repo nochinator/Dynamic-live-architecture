@@ -165,22 +165,27 @@ class Neuron:
         else:
             self.output = self.inputs
 
-    def train(self, loss: float, backpropogations):
+    def train(self, reward: float, backpropogations, reference_output):
         """
         Calculate changes based on the inputted value
-        :param loss: The loss of the specific neuron, also works as reinforcement with lower scores being better.
+        :param reward: The reward of the specific neuron
         :param backpropogations: how many neurons to back-propagate, higher improves learning, but requires more compute
+        :param reference_output: Used to provide context to the neuron(s)
         :return: None
         """
-        for i in range(len(self.synaptic_weights)):
-            # Gradient descent
-            gradient = loss * self.activation_derivative(self.input_memory)
-            self.synaptic_weights[i] += self.learning_rate * gradient
+        memory_index = np.where(self.output_memory == reference_output)
+        if len(memory_index) > 0:
+            total_input = sum(self.input_memory[memory_index])
+            for i in range(len(self.synaptic_weights)):
+                reference = self.input_memory[memory_index, i]
+                # modify weights
+                self.synaptic_weights[i] += self.learning_rate * abs(reward) * reference
 
-            # Increment memory by 1 and pass the signal to each connected neuron
-            if not self.is_input_neuron:
-                # Back-propagate to the other neurons
-                self.neuron_connections[i].train(loss, backpropogations - 1)
+                # Increment memory by 1 and pass the signal to each connected neuron
+                if not self.is_input_neuron and backpropogations > 0:
+                    # Back-propagate to the other neurons
+                    connection_reward = reward / (reference / total_input)
+                    self.neuron_connections[i].train(connection_reward, backpropogations - 1, reference)
 
 
 # May be removed
