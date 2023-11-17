@@ -3,7 +3,7 @@ import numpy as np
 
 
 class Neuron:
-    def __init__(self, possible_inputs: int, activation, activation_derivative, weight_initialization, memory_slots: int,
+    def __init__(self, network_size: int, activation, activation_derivative, weight_initialization, memory_slots: int,
                  is_input_neuron=False, connection_decay_rate=0.1, max_connection_strength=10.0,
                  initial_connection_strength=5.0, learning_rate=0.1):
         """
@@ -26,12 +26,12 @@ class Neuron:
         self.activation = activation
         self.activation_derivative = activation_derivative
         self.memory_slots = memory_slots
-        self.synaptic_weights = weight_initialization(num_inputs)
+        self.synaptic_weights = weight_initialization(network_size)
 
         # Prep variables for use
-        self.connection_strengths = np.full(num_inputs, initial_connection_strength, dtype=np.float64)
-        self.neuron_connections = np.empty(num_inputs, dtype=object)
-        self.inputs = np.zeros(num_inputs, dtype=np.float64)
+        self.connection_strengths = np.full(network_size, initial_connection_strength, dtype=np.float64)
+        self.neuron_connections = np.empty(network_size, dtype=object)
+        self.inputs = np.zeros(network_size, dtype=np.float64)
         self.is_input_neuron = is_input_neuron
         self.network = None
         self.output = 0.5
@@ -207,19 +207,21 @@ class NeuralNetwork:
         self.ouptuts = outputs
         return outputs
 
-    def reinforce(self, reward, backpropogations):
+    def reinforce(self, reward, backpropogations, reference_output=None):
         """
         Train the network based on expected input and output
         :param reward: array of shape output neurons, rewards each output seperatly, each value between -1 and 1
         :param backpropogatoions: How many neurons to backpropogate through, hihger values result in better fine-tuning
         but more than exponentially increase in compute required. Low values on large networks will result in neurons
         never training
-        :return predicted output with X_train input
+        :param reference_output: Used for training in hindsight. Leaving blank will use the last calculated output
+        :return None
         """
+        if reference_output is None:
+            reference_output = self.outputs
+        if
         for i, neuron in enumerate(self.output_neurons):
-            neuron.backpropogate(reward, backpropogations, self.ouptuts[i])
-        return output
-    # extra
+            neuron.train(reward[i], backpropogations, reference_output[i])
 
     def save_model(self, file_path):
         """
