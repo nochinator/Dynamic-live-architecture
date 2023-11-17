@@ -1,15 +1,39 @@
-# Dynamic-live Neural Networks
-Dynamic-Live neural networks are type of RNN. However they differ in an important way, the connections between each neuron is learnable. When a neuron is created it is not connected to anything. After every neuron we want to have in total is created we call a function and pass it a list of neurons. We do this for each neuron in our network. That list is every neuron that the a particular neuron is allowed to get input from. The network learns how to form good connections between every neuron.
+# Dynamic-Live Neural Networks
+
+Dynamic-Live neural networks are a type of RNN, differing significantly in that the connections between each neuron are learnable. When a neuron is created, it is not initially connected to anything. After creating all the neurons we need, a function is called for each neuron, specifying a list of neurons from which it can receive input. The network then autonomously learns to form effective connections between every neuron.
 
 ## How does it work?
-The main feature of this network is not yet finished, we are still in the phase of creating basic functionalities such as the training functions. A lot of these things are harder to implement because of the nature of the network. Below is what training the network looks like as of now.
-### Input propogation
-This is how basic predictions are made in this network. Just about any other neural network implements this in some for or another. This is a single function in our library.
+
+The main feature of this network is still in progress, with a focus on creating basic functionalities, including training functions. Below is an overview of the current training process.
+
+### Input Propagation
+
+This function is fundamental for making predictions in this network. While most neural networks implement this in some form, ours is encapsulated in a single function within our library.
+
 #### Priming
-This makes the neuron go and get it's inputs from each connected neuron. We can't get the inputs when we fire the neurons because doing so would cause some problems with the data that the neurons get, depending on the order that they are fired.
+
+This step involves the neuron fetching its inputs from each connected neuron. We can't retrieve inputs when firing neurons, as doing so could cause issues with the data that the neurons receive, depending on the firing order.
+
 #### Firing
-Each neuron in a layer is fired. This takes the dot product of the weights stored in the neuron and the inputs we got in the priming step. Then an activation function of the users design (custom activations supported) and the output of the neuron is stored in a variable. This is repeated for every layer in order. It's worth noting that layering is only used to tell the system what order to fire groups of neuron and has nothing to do with what neurons can connect where. After every neuron has fired the output of every neuron in the output layer is gathered into an array and returned.
-### Backpropogation
-Traditionaly we calculate the loss and calculate changes for each layer. We do things differently durring the priming and firing steps memory data is collected in the background, up to a certain amount set by the user. This data will not influence predictions made, it is instead used to get context of for training because in complex networks a neurons actions might not display until 5, 50 or even 500 cycles later. When we train the output over all output we are referencing is fed into each neurons training function as a parameter. The neuron looks at the contextual outputs index and then looks at the same index of another memroy bank for some internal values. These values are used in the calculation of the loss (custom loss functions are in the works) then we look at the derivative of the activation function and calculate gradients to update the weights with. After a neuron has made these changes it looks at every neuron it gets input from it finds that neurons ouptut it received and passes the signal up the network. This happens for every neuron which, for really large networks, can be computationaly expensive. This all seems like a really complex way to do backpropogation, but it (theoreticaly) allows for some extremely powerful training in terms of memory.
-### Connection training
-While I would love to say that this function is finished, it is not. Right now we are building networks by hand and they can't train the connections. Reasearch is still being done on how this will work. Keep in mind that this is a new concept that, as far as I can find, has not been aproached in this way. If you have concepts then please open an issue and explain your concept.
+
+Each neuron in a layer undergoes firing, which entails taking the dot product of the weights stored in the neuron and the inputs obtained during the priming step. The output is determined by the user's chosen activation function (custom activations are supported). The process is repeated for every layer in sequence. It's important to note that layering is only used to dictate the firing order of neuron groups and is unrelated to the connections between neurons. After every neuron has fired, the output of each neuron in the output layer is collected into an array and returned.
+
+### Backpropagation
+
+Unlike traditional methods that calculate loss and changes for each layer, we collect memory data in the background during priming and firing steps, up to a user-defined limit. This data doesn't influence predictions but provides context for training, particularly in complex networks where a neuron's actions might not manifest until several cycles later. During training, the output over all output is fed into each neuron's training function as a parameter. The neuron examines the contextual output's index, compares it to the same index in another memory bank for internal values, and uses them in loss calculation (custom loss functions are in progress). Subsequently, we examine the derivative of the activation function and calculate gradients for updating weights. After a neuron makes these changes, it reviews every neuron from which it receives input, identifies the output it received, and passes the signal up the network. This process occurs for every neuron, potentially being computationally expensive for large networks. While this may seem complex, it theoretically allows for powerful memory-focused training.
+
+### Connection Training
+
+This function is a work in progress. Currently, we build networks manually as they can't train connections. Ongoing research is exploring how this will work. Keep in mind that this is a novel concept, and as far as I can find, it has not been approached in this way. If you have concepts, please open an issue and explain your idea.
+
+## How do I download this?
+
+Currently, we don't have a release package. When available, this text will link to the releases. If you wish to use the current code, download the file and include it in your Python project. You can then import it like any other package, using the file name as the import name.
+
+## Getting involved
+
+We welcome anyone to get involved in various areas:
+
+- **Research:** Explore our research areas, detailed in the announcement in discussions.
+- **Bug Finding:** Testing the system and finding bugs, especially on beta releases, is invaluable. If you find one, please create a new issue.
+- **Coding:** Contribute by writing code. You can find an issue to work on or check milestones and contribute to the next one.
