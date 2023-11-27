@@ -3,16 +3,15 @@ import numpy as np
 
 
 class Neuron:
-    def __init__(self, network_size: int, activation, activation_derivative, weight_initialization, memory_slots: int,
+    def __init__(self, network_size: int, activation, weight_initialization, memory_slots: int,
                  is_input_neuron=False, connection_decay_rate=0.1, max_connection_strength=10.0,
                  initial_connection_strength=5.0, learning_rate=0.1):
         """
         Create a neuron a self-managing neuron. Using input neurons to provide input to a network is advised.
-        :param possible_inputs: the number of neurons that this neuron is able to connect to
+        :param network_size: the number of neurons that this neuron will be able to connect to
         :param activation: user defined function: 1 input and returns a number
-        :param activation_derivative: user defined function: 1 input which is a weight, should return
         :param weight_initialization: user defined function, takes 1 input of num_inputs, returns np array of weights
-        :param memory_slots: number of memory slots, higher improves accuracy but increases computati
+        :param memory_slots: number of memory slots, higher improves training  for hindsight but increases ram usage
         :param connection_decay_rate: how connections should decay, connections with no strength are trimmed, WIP
         :param max_connection_strength: the max strength of any one connection, WIP
         :param initial_connection_strength: how strong each connection should start at, WIP
@@ -24,7 +23,6 @@ class Neuron:
         self.initial_connection_strength = initial_connection_strength
         self.learning_rate = learning_rate
         self.activation = activation
-        self.activation_derivative = activation_derivative
         self.memory_slots = memory_slots
         self.synaptic_weights = weight_initialization(network_size)
 
@@ -47,32 +45,34 @@ class Neuron:
         """
         self.network = network
         # Create random connections and assign proper connection strengths
-        self.neuron_connections = np.random.choice(network, size=inital_connections, replace=False)
-
-    def reset_connection(self, index):
-        """
-        remove a connection and form a new one
-        :param index: the connection to reset
-        :return: None
-        """
+        self.neuron_connections = np.random.choice(network, size=len(self.inputs), replace=False)
 
     def prime(self, inputs=None):
         """
-        always call before firing the neurons in the network
+        Always call before firing the neurons in the network
         :param inputs: array of floats, gets inputs automatically if undefined based on the connected neurons.
-        :return:
+        :return: None
         """
         # Get inputs
         if inputs is None:
-            inputs = np.array([neuron.output for neuron in self.neuron_connections], dtype=np.float64)
+            self.inputs = np.array([neuron.output for neuron in self.neuron_connections])
         else:
-            inputs = np.array(inputs, dtype=np.float64)
+            self.inputs = np.array(inputs, dtype=np.float64)
 
-        self.inputs = inputs
 
-        # remember inputs
-        self.input_memory = np.insert(self.input_memory, 0, self.inputs)
-        # forget old inputs
+        # Debugging print statements (remove in production)
+        print(f"\n{self.input_memory}")
+        print(self.inputs)
+
+        # Shift all items in array to make room for new input
+        self.input_memory = np.roll(self.input_memory, axis=0, shift=1)
+
+        # Remember inputs
+        if len(self.input_memory) != 0:
+            self.input_memory[0] = self.inputs
+        else:
+            self.input_memory = np.array([self.inputs])
+        # Forget old inputs
         if len(self.input_memory) > self.memory_slots:
             self.input_memory = self.input_memory[:self.memory_slots]
 
@@ -93,30 +93,42 @@ class Neuron:
                 self.output_memory = self.output_memory[:self.memory_slots]
         else:
             self.output = self.inputs
+        print(self.output)
 
-    def train(self, reward: float, backpropogations, reference_output):
+    def train(self, reward: float, backpropagations, reference_output):
         """
         Calculate changes based on the inputted value
         :param reward: The reward of the specific neuron
-        :param backpropogations: how many neurons to back-propagate, higher improves learning, but requires more compute
+        :param backpropagations: how many neurons to back-propagate, higher improves learning, but requires more compute
         :param reference_output: Used to provide context to the neuron(s)
         :return: None
         """
         # check for context and get it
         memory_index = np.where(self.output_memory == reference_output)
-        if len(memory_index) > 0:
+        if len(memory_index[0]) > 0:
             total_input = sum(self.input_memory[memory_index])
             for i in range(len(self.synaptic_weights)):
-                # get context
-                reference = self.input_memory[memory_index, i]
-                # modify weights
-                self.synaptic_weights[i] += self.learning_rate * reward * reference
+                # check if the calculations need performing
+                if self.synaptic_weights[i] > 0:
+                    # get context
+                    reference = self.input_memory[memory_index, i]
+                    # modify weights
+                    self.synaptic_weights[i] += self.learning_rate * reward * reference
+                    # Increment memory by 1 and pass the signal to each connected neuron
+                    if not self.is_input_neuron and backpropagations > 1:
+                        # Back-propagate to the other neurons
+                        connection_reward = reward / (reference / total_input)
+                        self.neuron_connections[i].train(connection_reward, backpropagations - 1, reference)
+                # reconnecting, WIP, Works, currently is inefficient
+                else:
+                    unconnected_neurons = np.where(self.synaptic_weights == 0)
+                    for connection_index in unconnected_neurons[0]:
+                        if reward < 0 and np.random.uniform(0, 1) > 0.9:
+                            self.synaptic_weights[connection_index] = np.random.uniform(0, 0.05)
 
-                # Increment memory by 1 and pass the signal to each connected neuron
-                if not self.is_input_neuron and backpropogations > 1:
-                    # Back-propagate to the other neurons
-                    connection_reward = reward / (reference / total_input)
-                    self.neuron_connections[i].train(connection_reward, backpropogations - 1, reference)
+            # normalize weights to add up to 1
+            total_weight = sum(self.synaptic_weights)
+            self.synaptic_weights = [weight / total_weight for weight in self.synaptic_weights]
 
 
 # May be removed
@@ -170,56 +182,62 @@ class NeuralNetwork:
         self.neuron_importance = []
         self.outputs = []
 
-    def propagate_input(self, inputs, update_connection_strength=True):
+    def propagate_input(self, inputs):
         """
         Provide inputs for the entire network and propagate them through the entire network.
-        :param inputs: array of shape (number of input neurons,)
-        :param update_connection_strength:
+        :param inputs: array of shape *number of input neurons*
         :return: network outputs
         """
         outputs = []
 
         # Prime neurons
+        print("\ninputs")
+
         for i, neuron in enumerate(self.input_neurons):
             neuron.prime(inputs[i])
-
         # Fire input neurons
         for neuron in self.input_neurons:
-            neuron.fire(update_connection_strength)
+            neuron.fire()
 
         # Hidden neurons layer by layer
         for layer in self.hidden_layers:
+            print("\nhidden")
+
             # Prime neurons in the layer
             for neuron in layer:
                 neuron.prime()
             # Fire neurons in the layer
             for neuron in layer:
-                neuron.fire(update_connection_strength)
+                neuron.fire()
 
         # Output neurons
+        print("\noutputs")
+
         for neuron in self.output_neurons:
             # Prime output neuron
             neuron.prime()
         for neuron in self.output_neurons:
             # Fire output neuron
-            neuron.fire(update_connection_strength)
+            neuron.fire()
             outputs.append(neuron.output)
-        self.ouptuts = outputs
+        self.outputs = outputs
         return outputs
 
     def reinforce(self, reward, backpropogations, reference_output=None):
         """
         Train the network based on expected input and output
-        :param reward: array of shape output neurons, rewards each output seperatly, each value between -1 and 1
-        :param backpropogatoions: How many neurons to backpropogate through, hihger values result in better fine-tuning
-        but more than exponentially increase in compute required. Low values on large networks will result in neurons
+        :param reward: array of shape *number of output neurons, rewards each output separately, values between -1 and 1
+        :param backpropogations: How many neurons to backpropogate through, higher values result in better fine-tuning
+        but an exponential increase in compute required. Low values on large networks will result in some neurons
         never training
-        :param reference_output: Used for training in hindsight. Leaving blank will use the last calculated output
+        :param reference_output: Used for training in hindsight. Leaving blank will reward the last predicted output
         :return None
         """
+        # defaults
         if reference_output is None:
             reference_output = self.outputs
-        if
+
+        # train each output neuron with the parameters
         for i, neuron in enumerate(self.output_neurons):
             neuron.train(reward[i], backpropogations, reference_output[i])
 
@@ -259,15 +277,15 @@ def main():
 
     # Create a neural network for XOR problem
     input_neurons = np.array(
-        [Neuron(1, activation=leaky_relu, weight_initialization=weight_initialize, memory_slots=1,
+        [Neuron(1, activation=activation, weight_initialization=weight_initialize, memory_slots=3,
                 is_input_neuron=True) for _ in range(2)])
 
     hidden_layers = np.array([
-        [Neuron(num_inputs=2, activation=leaky_relu, weight_initialization=weight_initialize, memory_slots=1)
+        [Neuron(2, activation=activation, weight_initialization=weight_initialize, memory_slots=3)
          for _ in range(2)]])
 
     output_neurons = np.array(
-        [Neuron(num_inputs=2, activation=leaky_relu, weight_initialization=weight_initialize, memory_slots=1)])
+        [Neuron(2, activation=activation, weight_initialization=weight_initialize, memory_slots=3)])
 
     # Initialize connections
     for neuron in hidden_layers[0]:
@@ -278,7 +296,7 @@ def main():
         input_neurons=input_neurons,
         hidden_layers=hidden_layers,
         output_neurons=output_neurons,
-        learning_rate=0.01
+        learning_rate=0.01,
     )
 
     # Train the neural network on XOR data
@@ -286,7 +304,10 @@ def main():
     for epoch in range(epochs):
         output = []
         for i in range(len(X_train)):
-            output.append(neural_network.train(X_train[i], y_train[i], False))
+            result = (neural_network.propagate_input(X_train))
+            reward = (result[0] - 0.5) * 2
+            neural_network.reinforce(reward, 5)
+            output.append(result)
         if epoch % 1000 == 0:
             print(
                 f"\nEpoch {epoch}: Predictions - {[round(prediction[0], 3) for prediction in output]}, Expected - {y_train.flatten()}",
