@@ -37,3 +37,5 @@ We welcome anyone to get involved in various areas:
 - **Research:** Explore our research areas, detailed in the announcement in discussions.
 - **Bug Finding:** Testing the system and finding bugs, especially on beta releases, is invaluable. If you find one, please create a new issue.
 - **Coding:** Contribute by writing code. You can find an issue to work on or check milestones and contribute to the next one.
+
+If you would like to work on code then please use an existing code space or, if there are no current code spaces, open a new code space on the alpha branch.
