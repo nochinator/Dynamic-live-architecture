@@ -98,10 +98,10 @@ class Neuron:
             else:
                 memory_index = 0
 
-            total_input = sum(self.input_memory[memory_index])
             for i in range(len(self.synaptic_weights)):
                 # check if the neuron is connected or not
                 if self.synaptic_weights[i] > 0:
+
                     # get context
                     reference = self.input_memory[memory_index, i]
                     # modify weights
@@ -110,9 +110,9 @@ class Neuron:
                     # Increment memory by 1 and pass the signal to each connected neuron
                     if backpropagations > 1:
                         # Back-propagate to the other neurons
-                        connection_reward = reward / (reference / total_input)
+                        connection_reward = reward / len(self.neuron_connections)  # under research functional but WIP
                         self.neuron_connections[i].train(connection_reward, backpropagations - 1, reference)
-                # reconnecting, WIP, Works, currently is inefficient, does things randomly, but won't when finished
+                # reconnecting, functional but WIP, reconnects randomly, but won't when finished
                 else:
                     unconnected_neurons = np.where(self.synaptic_weights == 0)
                     for connection_index in unconnected_neurons[0]:

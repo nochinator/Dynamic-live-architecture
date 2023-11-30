@@ -15,16 +15,15 @@ new_neuron = neuron.Neuron
 # XOR data
 X_train = np.array([[0, 0], [0, 1], [1, 0], [1, 1]])
 y_train = np.array([[0], [1], [1], [0]])
+learning_rate = 0.2
 
 # Create a neural network for XOR problem
 input_neurons = np.array(
-    [new_neuron(memory_slots=3, is_input_neuron=True) for _ in range(2)])
+    [new_neuron(memory_slots=3, is_input_neuron=True, learning_rate=learning_rate) for _ in range(2)])
 
-hidden_layers = np.array([
-    [new_neuron(memory_slots=3) for _ in range(2)]])
+hidden_layers = np.array([[new_neuron(memory_slots=3, learning_rate=learning_rate) for _ in range(2)]])
 
-output_neurons = np.array(
-    [new_neuron(memory_slots=3)])
+output_neurons = np.array([new_neuron(memory_slots=3, learning_rate=learning_rate)])
 
 # Initialize connections
 for neuron in hidden_layers[0]:
