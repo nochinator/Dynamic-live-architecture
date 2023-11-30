@@ -62,6 +62,7 @@ class NeuralNetwork:
         never training
         :return: None
         """
+        print("training")
         # train each output neuron with the parameters
         for i, neuron in enumerate(self.output_neurons):
             neuron.train(reward[i], backpropogations)

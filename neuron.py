@@ -43,8 +43,8 @@ class Neuron:
         if inputs is None:
             self.inputs = np.array([neuron.output for neuron in self.neuron_connections])
         else:
-            self.inputs = np.array(inputs, dtype=np.float64)
-        print(f"\nitem to add: {inputs}")
+            self.inputs = np.array([inputs], dtype=np.float64)
+        print(f"\nitem to add: {self.inputs}")
         print(f"array to add too: {self.input_memory}")
 
         # Shift all items in array to make room for new inputs in memory
@@ -68,7 +68,8 @@ class Neuron:
         """
         if not self.is_input_neuron:
             # Calculate sums, take averages, and apply activation function
-            self.output = np.dot(self.inputs, self.synaptic_weights) / np.sum(self.inputs) ** 2
+            self.output = np.sum(np.dot(self.inputs, self.synaptic_weights)) / np.sum(self.inputs) ** 2 if np.sum(
+                self.inputs) != 0 else 0
 
             # Shift all items in array to make room for new inputs in memory
             self.output_memory = np.roll(self.input_memory, axis=0, shift=1)
@@ -83,7 +84,7 @@ class Neuron:
                 self.output_memory = self.output_memory[:self.memory_slots]
         # for input neurons
         else:
-            self.output = self.inputs
+            self.output = self.inputs[0]
 
         print(f"output: {self.output}")
 
@@ -113,6 +114,7 @@ class Neuron:
                 # Increment memory by 1 and pass the signal to each connected neuron
                 if not self.is_input_neuron and backpropagations > 1:
                     # Back-propagate to the other neurons
+                    print(reward)
                     connection_reward = reward / (reference / total_input)
                     self.neuron_connections[i].train(connection_reward, backpropagations - 1, reference)
             # reconnecting, WIP, Works, currently is inefficient, does things randomly, but won't when finished

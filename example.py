@@ -41,11 +41,10 @@ neural_network = network_manager.NeuralNetwork(
 epochs = 10000
 for epoch in range(epochs):
     output = []
-    reward = np.array([])
     for i in range(len(X_train)):
         result = (neural_network.propagate_input(X_train[i]))
-        #print(result)
-        reward = np.append(reward, (result[0] - 0.5) * 2)
+        # print(result)
+        reward = np.array([(result[0] - 0.5) * 2])
         neural_network.reinforce(reward, 5)
         output.append(result)
     print(f"\nEpoch {epoch}: Predictions - {[round(prediction[0], 3) for prediction in output]}, Expected - "
