@@ -1,5 +1,8 @@
 # Dynamic-Live Neural Networks
 
+## IMPORTANT NOTE:
+The code in release and beta are no updated, the code in alpha is in development
+
 Dynamic-Live neural networks are a type of RNN, differing significantly in that the connections between each neuron are learnable. When a neuron is created, it is not initially connected to anything. After creating all the neurons we need, a function is called for each neuron, specifying a list of neurons from which it can receive input. The network then autonomously learns to form effective connections between every neuron.
 
 ## How does it work?
