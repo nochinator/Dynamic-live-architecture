@@ -44,8 +44,6 @@ class Neuron:
             self.inputs = np.array([neuron.output for neuron in self.neuron_connections])
         else:
             self.inputs = np.array([inputs], dtype=np.float64)
-        print(f"\nitem to add: {self.inputs}")
-        print(f"array to add too: {self.input_memory}")
 
         # Shift all items in array to make room for new inputs in memory
         self.input_memory = np.roll(self.input_memory, axis=0, shift=1)
@@ -59,7 +57,6 @@ class Neuron:
         # Forget old inputs
         if len(self.input_memory) > self.memory_slots:
             self.input_memory = self.input_memory[:self.memory_slots]
-        print(f"after addition: {self.input_memory}")
 
     def fire(self):
         """
@@ -86,8 +83,6 @@ class Neuron:
         else:
             self.output = self.inputs[0]
 
-        print(f"output: {self.output}")
-
     def train(self, reward: float, backpropagations: int, reference_output=None):
         """
         Calculate changes based on the inputted value
@@ -96,34 +91,34 @@ class Neuron:
         :param reference_output: Used to provide context to the neuron(s)
         :return: None
         """
-        # check for context and get it
-        if reference_output is not None:
-            memory_index = np.where(self.output_memory == reference_output)
-        else:
-            memory_index = 0
-
-        total_input = sum(self.input_memory[memory_index])
-        for i in range(len(self.synaptic_weights)):
-            # check if the neuron is connected or not
-            if self.synaptic_weights[i] > 0:
-                # get context
-                reference = self.input_memory[memory_index, i]
-                # modify weights
-                self.synaptic_weights[i] += self.learning_rate * reward * reference
-
-                # Increment memory by 1 and pass the signal to each connected neuron
-                if not self.is_input_neuron and backpropagations > 1:
-                    # Back-propagate to the other neurons
-                    print(reward)
-                    connection_reward = reward / (reference / total_input)
-                    self.neuron_connections[i].train(connection_reward, backpropagations - 1, reference)
-            # reconnecting, WIP, Works, currently is inefficient, does things randomly, but won't when finished
+        if not self.is_input_neuron:
+            # check for context
+            if reference_output is not None:
+                memory_index = np.argmax(self.output_memory == reference_output)
             else:
-                unconnected_neurons = np.where(self.synaptic_weights == 0)
-                for connection_index in unconnected_neurons[0]:
-                    if reward < 0 and np.random.uniform(0, 1) > 0.9:
-                        self.synaptic_weights[connection_index] = np.random.uniform(0, 0.05)
+                memory_index = 0
 
-            # normalize weights to add up to 1
-            total_weight = sum(self.synaptic_weights)
-            self.synaptic_weights = [weight / total_weight for weight in self.synaptic_weights]
+            total_input = sum(self.input_memory[memory_index])
+            for i in range(len(self.synaptic_weights)):
+                # check if the neuron is connected or not
+                if self.synaptic_weights[i] > 0:
+                    # get context
+                    reference = self.input_memory[memory_index, i]
+                    # modify weights
+                    self.synaptic_weights[i] += self.learning_rate * reward * reference
+
+                    # Increment memory by 1 and pass the signal to each connected neuron
+                    if backpropagations > 1:
+                        # Back-propagate to the other neurons
+                        connection_reward = reward / (reference / total_input)
+                        self.neuron_connections[i].train(connection_reward, backpropagations - 1, reference)
+                # reconnecting, WIP, Works, currently is inefficient, does things randomly, but won't when finished
+                else:
+                    unconnected_neurons = np.where(self.synaptic_weights == 0)
+                    for connection_index in unconnected_neurons[0]:
+                        if reward < 0 and np.random.uniform(0, 1) > 0.9:
+                            self.synaptic_weights[connection_index] = np.random.uniform(0, 0.05)
+
+                # normalize weights to add up to 1
+                total_weight = sum(self.synaptic_weights)
+                self.synaptic_weights = [weight / total_weight for weight in self.synaptic_weights]

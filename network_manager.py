@@ -21,16 +21,12 @@ class NeuralNetwork:
         """
         outputs = []
 
-        print("input")
-
         # Prime neurons
         for i, neuron in enumerate(self.input_neurons):
             neuron.prime(inputs[i])
         # Fire input neurons
         for neuron in self.input_neurons:
             neuron.fire()
-
-        print("hidden")
 
         # Hidden neurons layer by layer
         for layer in self.hidden_layers:
@@ -40,8 +36,6 @@ class NeuralNetwork:
             # Fire neurons in the layer
             for neuron in layer:
                 neuron.fire()
-
-        print("output")
 
         # Output neurons
         for neuron in self.output_neurons:
