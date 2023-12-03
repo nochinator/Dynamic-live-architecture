@@ -18,10 +18,9 @@ y_train = np.array([[0], [1], [1], [0]])
 learning_rate = 0.2
 
 # Create a neural network for XOR problem
-input_neurons = np.array(
-    [new_neuron(memory_slots=3, is_input_neuron=True, learning_rate=learning_rate) for _ in range(2)])
+input_neurons = np.array([new_neuron(memory_slots=3, is_input_neuron=True) for _ in range(2)])
 
-hidden_layers = np.array([[new_neuron(memory_slots=3, learning_rate=learning_rate) for _ in range(2)]])
+hidden_layers = np.array([[new_neuron(memory_slots=3, learning_rate=learning_rate) for _ in range(4)]])
 
 output_neurons = np.array([new_neuron(memory_slots=3, learning_rate=learning_rate)])
 
@@ -37,7 +36,7 @@ neural_network = network_manager.NeuralNetwork(
 )
 
 # Train the neural network on XOR data
-epochs = 10000
+epochs = 100000
 for epoch in range(epochs):
     output = []
     for i in range(len(X_train)):

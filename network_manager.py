@@ -1,8 +1,11 @@
 import pickle
+import neuron as n
+from typing import List, Union
 
 
 class NeuralNetwork:
-    def __init__(self, input_neurons, hidden_layers, output_neurons):
+    def __init__(self, input_neurons: List[n.Neuron], hidden_layers: List[List[n.Neuron]],
+                 output_neurons: List[n.Neuron]):
         """
         create a neural network using the Neuron class.
         :param input_neurons: expected format: np.array[InputNeuron(), InputNeuron(), etc.]
@@ -13,7 +16,7 @@ class NeuralNetwork:
         self.hidden_layers = hidden_layers
         self.output_neurons = output_neurons
 
-    def propagate_input(self, inputs):
+    def propagate_input(self, inputs: List[float]) -> List[float]:
         """
         Provide inputs for the entire network and propagate them through the entire network.
         :param inputs: array of shape *number of input neurons*
@@ -47,23 +50,23 @@ class NeuralNetwork:
             outputs.append(neuron.output)
         return outputs
 
-    def reinforce(self, reward, backpropogations: int):
+    def reinforce(self, reward: List[float], backpropagations: int) -> None:
         """
         Train the network based on expected input and output
         :param reward: array with rewards for each output separately, values between -1 and 1
-        :param backpropogations: How many neurons to backpropogate through, higher values result in better fine-tuning
+        :param backpropagations: How many neurons to backpropogate through, higher values result in better fine-tuning
         but an exponential increase in compute required. Low values on large networks will result in some neurons
         never training
         :return: None
         """
         # train each output neuron with the parameters
         for i, neuron in enumerate(self.output_neurons):
-            neuron.train(reward[i], backpropogations)
+            neuron.train(reward[i], backpropagations)
 
     def save_model(self, file_path):
         """
         Save the created neural network as a pkl. resulting file contains all data needed to reconstruct the network.
-        :param file_path: path to save file at
+        :param file_path: path to save model to
         :return: None
         """
         with open(file_path, 'wb') as file:
@@ -73,7 +76,7 @@ class NeuralNetwork:
     def load_model(cls, file_path):
         """
         Load a pkl file that contains a neural network. File must contain all data needed to reconstruct the network.
-        :param file_path: path to load file from
+        :param file_path: path to load model from
         :return: None
         """
         with open(file_path, 'rb') as file:

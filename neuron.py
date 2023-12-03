@@ -19,18 +19,20 @@ class Neuron:
         self.inputs = np.array([], dtype=np.float64)
         self.input_memory = np.array([], dtype=np.float64)
         self.output_memory = np.array([], dtype=np.float64)
-        self.neuron_connections = np.array([], dtype=object)
+        self.neuron_connections = []
         self.synaptic_weights = np.array([], dtype=np.float64)
+        self.bias = 0
 
     def initialize_connections(self, network):
         """
         Connect this neuron to random neurons in the network.
-        :param network: np array of neurons that this neuron can connect too
+        :param network: list of neurons that this neuron can connect too, np array is slower here
         :return: None
         """
         # Create random connections and assign proper connection strengths
         self.neuron_connections = network
-        self.synaptic_weights = np.full(len(network), 1 / len(network), dtype=np.float64)
+        distributed_weights = len(network), 1 / len(network) + 1
+        self.synaptic_weights = np.full(distributed_weights, dtype=np.float64)
 
     def prime(self, inputs=None):
         """
@@ -65,8 +67,8 @@ class Neuron:
         """
         if not self.is_input_neuron:
             # Calculate sums, take averages, and apply activation function
-            self.output = np.sum(np.dot(self.inputs, self.synaptic_weights)) / np.sum(self.inputs) ** 2 if np.sum(
-                self.inputs) != 0 else 0
+            self.output = (np.sum(np.dot(self.inputs, self.synaptic_weights)) / np.sum(self.inputs)) ** 2 \
+                if np.sum(self.inputs) != 0 else 0
 
             # Shift all items in array to make room for new inputs in memory
             self.output_memory = np.roll(self.input_memory, axis=0, shift=1)
@@ -121,4 +123,4 @@ class Neuron:
 
                 # normalize weights to add up to 1
                 total_weight = sum(self.synaptic_weights)
-                self.synaptic_weights = [weight / total_weight for weight in self.synaptic_weights]
+                self.synaptic_weights /= total_weight
