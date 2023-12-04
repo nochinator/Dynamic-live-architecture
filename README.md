@@ -4,7 +4,7 @@ Dynamic-Live neural networks are a type of RNN, differing significantly in that 
 
 ## IMPORTANT NOTE:
 
-This is the alpha branch! This code is extremly unstable and changes often! If you have problems when using this then we can't help you. This specific readme may be outdated compared to the code in the alpha branch
+We are in beta! The code may have errors! If you find any open a issue!
 
 ## How does it work?
 
