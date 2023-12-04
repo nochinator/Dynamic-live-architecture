@@ -31,8 +31,8 @@ class Neuron:
         """
         # Create random connections and assign proper connection strengths
         self.neuron_connections = network
-        distributed_weights = len(network), 1 / len(network) + 1
-        self.synaptic_weights = np.full(distributed_weights, dtype=np.float64)
+        distributed_weights = 1 / len(network)
+        self.synaptic_weights = np.full(len(network), distributed_weights, dtype=np.float64)
 
     def prime(self, inputs=None):
         """
