@@ -3,14 +3,6 @@ import neuron
 import numpy as np
 
 
-def activation(x):
-    return x ** 2 - 1
-
-
-def weight_initialize(x):
-    return np.random.uniform(0.4, 0.6, x)
-
-
 new_neuron = neuron.Neuron
 # memory XOR data
 X_train = np.array([[0], [1], [1], [0]])
