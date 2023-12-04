@@ -1,41 +1,48 @@
 # Dynamic-Live Neural Networks
 
-Dynamic-Live neural networks are a type of RNN, differing significantly in that the connections between each neuron are learnable. When a neuron is created, it is not initially connected to anything. After creating all the neurons we need, a function is called for each neuron, specifying a list of neurons from which it can receive input. The network then autonomously learns to form effective connections between every neuron.
+Dynamic-Live neural networks are a type of RNN, differing significantly in that the connections between each neuron are learnable. When a neuron is created, it is not initially connected to anything. After creating all the neurons you want, you must call a function for each neuron specifying a list of neurons from which it can receive input. To train the network, call the reinforce function in the network manager script. From the rewards you give, it will train the strengths/weights of the connections.
+
+## IMPORTANT NOTE:
+
+This is the alpha branch! This code is extremly unstable and changes often! If you have problems when using this then we can't help you. This specific readme may be outdated compared to the code in the alpha branch
 
 ## How does it work?
 
-The main feature of this network is still in progress, with a focus on creating basic functionalities, including training functions. Below is an overview of the current training process.
+Some of the main features of this framework are still a work in progress (WIP). Below is an overview of how the internals currently work.
 
 ### Input Propagation
 
-This function is fundamental for making predictions in this network. While most neural networks implement this in some form, ours is encapsulated in a single function within our library.
+A function similar to this is included in every neural network framework that I can find. The functions below are called on each layer of the network in order. Keep in mind that the order of layers only determines the order neurons are fired, which can help get results out in fewer cycles. It does not determine which neurons can connect where.
 
 #### Priming
 
-This step involves the neuron fetching its inputs from each connected neuron. We can't retrieve inputs when firing neurons, as doing so could cause issues with the data that the neurons receive, depending on the firing order.
+This step involves the neuron fetching its inputs from each connected neuron. We can't retrieve inputs when firing neurons, as doing so could cause issues with the data that the neurons receive, depending on the user's network architecture.
 
 #### Firing
 
-Each neuron in a layer undergoes firing, which entails taking the dot product of the weights stored in the neuron and the inputs obtained during the priming step. The output is determined by the user's chosen activation function (custom activations are supported). The process is repeated for every layer in sequence. It's important to note that layering is only used to dictate the firing order of neuron groups and is unrelated to the connections between neurons. After every neuron has fired, the output of each neuron in the output layer is collected into an array and returned.
+Each neuron in a layer undergoes firing, which entails taking the sum of the dot product of the weights stored in the neuron and the inputs obtained during the priming step. For an activation function, we square it; currently, it's not user-selectable, but this will likely change in the future. After every neuron has fired, the output of each neuron in the output layer is collected into an array and returned.
 
-### Backpropagation
+### Training
 
-Unlike traditional methods that calculate loss and changes for each layer, we collect memory data in the background during priming and firing steps, up to a user-defined limit. This data doesn't influence predictions but provides context for training, particularly in complex networks where a neuron's actions might not manifest until several cycles later. During training, the output over all output is fed into each neuron's training function as a parameter. The neuron examines the contextual output's index, compares it to the same index in another memory bank for internal values, and uses them in loss calculation (custom loss functions are in progress). Subsequently, we examine the derivative of the activation function and calculate gradients for updating weights. After a neuron makes these changes, it reviews every neuron from which it receives input, identifies the output it received, and passes the signal up the network. This process occurs for every neuron, potentially being computationally expensive for large networks. While this may seem complex, it theoretically allows for powerful memory-focused training.
+This is one of the biggest differences from other networks. We currently only support reinforcement, but this could change if someone can figure out how to implement another type of training in this framework.
 
-### Connection Training
+#### Backpropagation
 
-This function is a work in progress. Currently, we build networks manually as they can't train connections. Ongoing research is exploring how this will work. Keep in mind that this is a novel concept, and as far as I can find, it has not been approached in this way. If you have concepts, please open an issue and explain your idea.
+Unlike traditional reinforcement methods that give the reward to everything and everything makes updates, we use concepts of backpropagation for reinforcement. The process starts with collecting memory data in the background during priming and firing steps, up to a user-defined limit. This data doesn't influence predictions but provides context for training, particularly in complex networks where a neuron's actions might not manifest until several cycles later. When the training function is called on a neuron, it receives reference output. This is used to find what input to make changes based on. We do this to support recurrent network and similar so the neurons can train based on the proper input. The neuron runs your reward score (positive or negative) through a math function that updates the weights/connection strengths of the neuron. The weights are then normalized so they add up to 1. Finaly, for every neuron it takes input from, it calls this same function, distributing the reward score among them and giving them proper reference.
+
+#### Connection Training
+
+This is very much WIP and can change at any time! As of now, the neuron looks at every neuron it can connect to but is not connected to, and, if the reward was negative, has a 1/10 chance to reconnect.
 
 ## How do I download this?
 
-Currently, we don't have a release package. When available, this text will link to the releases. If you wish to use the current code, download the file and include it in your Python project. You can then import it like any other package, using the file name as the import name.
+Look on the right side panel for the section labeled releases. The item displayed there is the latest full release. As of now, these are beta releases.
 
 ## Getting involved
 
 We welcome anyone to get involved in various areas:
 
-- **Research:** Explore our research areas, detailed in the announcement in discussions.
-- **Bug Finding:** Testing the system and finding bugs, especially on beta releases, is invaluable. If you find one, please create a new issue.
-- **Coding:** Contribute by writing code. You can find an issue to work on or check milestones and contribute to the next one.
-
-If you would like to work on code then please use an existing code space or, if there are no current code spaces, open a new code space on the alpha branch.
+- **Research**: Explore our research areas, detailed in the announcement in discussions.
+- **Bug Finding**: Testing the system and finding bugs, especially on beta releases, is invaluable. If you find one, please create a new issue.
+- **Wiki Writer**: Writing the wiki pages is invaluable. It lets other users know how the framework works and how to use it.
+- **Coding**: Contribute by writing code. You can find an issue to work on or check milestones and contribute to the next one.
