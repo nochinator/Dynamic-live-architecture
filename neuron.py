@@ -29,7 +29,7 @@ class Neuron:
         :param network: list of neurons that this neuron can connect too, np array is slower here
         :return: None
         """
-        # Create random connections and assign proper connection strengths
+        # Create connections and assign proper connection strengths
         self.neuron_connections = network
         distributed_weights = 1 / len(network)
         self.synaptic_weights = np.full(len(network), distributed_weights, dtype=np.float64)
