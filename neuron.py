@@ -65,6 +65,7 @@ class Neuron:
         Make a prediction with the neuron based on the input collected by the prime function
         :return: None, get the output from neuron.output
         """
+
         if not self.is_input_neuron:
             # Calculate sums, take averages, and apply activation function
             self.output = (np.sum(np.dot(self.inputs, self.synaptic_weights)) / np.sum(self.inputs)) ** 2 \

@@ -11,31 +11,30 @@ new_neuron = neuron.Neuron
 learning_rate = 0.1  # create dynamic adjustment system
 
 # Create network
-input_neurons = [new_neuron(memory_slots=3, is_input_neuron=True) for _ in range(100)]
+input_neurons = [new_neuron(memory_slots=3, is_input_neuron=True) for _ in range(20000)]
 
-hidden_layers = [[new_neuron(memory_slots=3, learning_rate=learning_rate) for _ in range(500)] for _ in range(3)]
+hidden_neurons = [new_neuron(memory_slots=3, learning_rate=learning_rate) for _ in range(1000)]
 
 output_neurons = [new_neuron(memory_slots=3, learning_rate=learning_rate)]
 
 # Initialize connections
-front_neurons = [input_neurons[0], (neuron for layer in hidden_layers for neuron in layer)]
-for layer in range(len(hidden_layers)):
-    for neuron in hidden_layers[layer]:
-        neuron.initialize_connections(front_neurons)
+front_neurons = [input_neurons[0]] + hidden_neurons
+for neuron in hidden_neurons:
+    neuron.initialize_connections(front_neurons)
 
-output_neurons[0].initialize_connections((neuron for layer in hidden_layers for neuron in layer))
+output_neurons[0].initialize_connections(hidden_neurons)
 
 # create network
-nn = network_manager.NeuralNetwork(input_neurons, hidden_layers, output_neurons)
+nn = network_manager.NeuralNetwork(input_neurons, hidden_neurons, output_neurons)
 
 
 # Initialize Pygame
 pygame.init()
 
 # Constants
-WIDTH, HEIGHT = 400, 200
-BALL_RADIUS = 10
-PADDLE_WIDTH, PADDLE_HEIGHT = 10, 50
+WIDTH, HEIGHT = 200, 100
+BALL_RADIUS = 5
+PADDLE_WIDTH, PADDLE_HEIGHT = 5, 25
 FPS = 60
 WHITE = (255, 255, 255)
 BLACK = (0, 0, 0)
@@ -55,6 +54,7 @@ ball_dy = random.choice([-5, 5])
 # Game loop
 clock = pygame.time.Clock()
 while True:
+    pygame.display.flip()
     # Capture the current frame
     frame = pygame.surfarray.array3d(pygame.display.get_surface())
 
@@ -73,7 +73,7 @@ while True:
             pygame.quit()
             sys.exit()
 
-    ai_paddle.y += (movement[0] - 0.5)
+    ai_paddle.y += (movement[0] - 0.5) * 5
 
     # Ball movement
     ball.x += ball_dx
@@ -83,12 +83,16 @@ while True:
     if ball.top <= 0 or ball.bottom >= HEIGHT:
         ball_dy = -ball_dy
 
-    # Ball collision with AI paddle
+    # Ball collision with AI paddle and far wall
     if ball.colliderect(ai_paddle):
+        ball_dx = -ball_dx
+        # reward
+
+    if ball.right >= WIDTH:
         ball_dx = -ball_dx
 
     # Ball passes AI paddle
-    if ball.right >= WIDTH:
+    if ball.left <= 0:
         # Reset ball position
         ball.x = WIDTH // 2 - BALL_RADIUS
         ball.y = HEIGHT // 2 - BALL_RADIUS
