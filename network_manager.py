@@ -1,104 +1,84 @@
-import neuron
-import network_manager
-import numpy as np
-import pygame
-import sys
-import random
-from pygame.locals import *
+import pickle
+import neuron as n
+from typing import List, Union
 
 
-new_neuron = neuron.Neuron
-learning_rate = 0.1  # create dynamic adjustment system
+class NeuralNetwork:
+    def __init__(self, input_neurons: List[n.Neuron], hidden_layers: List[List[n.Neuron]],
+                 output_neurons: List[n.Neuron]):
+        """
+        create a neural network using the Neuron class.
+        :param input_neurons: expected format: np.array[InputNeuron(), InputNeuron(), etc.]
+        :param hidden_layers: expected format: np.array[[Neuron(), Neuron()], [Neuron(), Neuron()], etc.]
+        :param output_neurons: expected format: np.array[Neuron(), Neuron(), etc.]
+        """
+        self.input_neurons = input_neurons
+        self.hidden_layers = hidden_layers
+        self.output_neurons = output_neurons
 
-# Create network
-input_neurons = [new_neuron(memory_slots=3, is_input_neuron=True) for _ in range(100)]
+    def propagate_input(self, inputs: List[float]) -> List[float]:
+        """
+        Provide inputs for the entire network and propagate them through the entire network.
+        :param inputs: array of shape *number of input neurons*
+        :return: network outputs
+        """
+        outputs = []
 
-hidden_layers = [[new_neuron(memory_slots=3, learning_rate=learning_rate) for _ in range(500)] for _ in range(3)]
+        # Prime neurons
+        for i, neuron in enumerate(self.input_neurons):
+            neuron.prime(inputs[i])
+        # Fire input neurons
+        for neuron in self.input_neurons:
+            neuron.fire()
 
-output_neurons = [new_neuron(memory_slots=3, learning_rate=learning_rate)]
+        # Hidden neurons layer by layer
+        for layer in self.hidden_layers:
+            # Prime neurons in the layer
+            for neuron in layer:
+                neuron.prime()
+            # Fire neurons in the layer
+            for neuron in layer:
+                neuron.fire()
 
-# Initialize connections
-front_neurons = [input_neurons[0], (neuron for layer in hidden_layers for neuron in layer)]
-for layer in range(len(hidden_layers)):
-    for neuron in hidden_layers[layer]:
-        neuron.initialize_connections(front_neurons)
+        # Output neurons
+        for neuron in self.output_neurons:
+            # Prime output neuron
+            neuron.prime()
+        for neuron in self.output_neurons:
+            # Fire output neuron
+            neuron.fire()
+            outputs.append(neuron.output)
+        return outputs
 
-output_neurons[0].initialize_connections((neuron for layer in hidden_layers for neuron in layer))
+    def reinforce(self, reward: List[float], backpropagations: int) -> None:
+        """
+        Train the network based on expected input and output
+        :param reward: array with rewards for each output separately, values between -1 and 1
+        :param backpropagations: How many neurons to backpropogate through, higher values result in better fine-tuning
+        but an exponential increase in compute required. Low values on large networks will result in some neurons
+        never training
+        :return: None
+        """
+        # train each output neuron with the parameters
+        for i, neuron in enumerate(self.output_neurons):
+            neuron.train(reward[i], backpropagations)
 
-# create network
-nn = network_manager.NeuralNetwork(input_neurons, hidden_layers, output_neurons)
+    def save_model(self, file_path):
+        """
+        Save the created neural network as a pkl. resulting file contains all data needed to reconstruct the network.
+        :param file_path: path to save model to
+        :return: None
+        """
+        with open(file_path, 'wb') as file:
+            pickle.dump(self, file)
 
-
-# Initialize Pygame
-pygame.init()
-
-# Constants
-WIDTH, HEIGHT = 400, 200
-BALL_RADIUS = 10
-PADDLE_WIDTH, PADDLE_HEIGHT = 10, 50
-FPS = 60
-WHITE = (255, 255, 255)
-BLACK = (0, 0, 0)
-
-# Initialize game window
-screen = pygame.display.set_mode((WIDTH, HEIGHT))
-pygame.display.set_caption("Pong AI")
-
-# Paddle and ball initial positions
-ai_paddle = pygame.Rect(10, HEIGHT // 2 - PADDLE_HEIGHT // 2, PADDLE_WIDTH, PADDLE_HEIGHT)
-ball = pygame.Rect(WIDTH // 2 - BALL_RADIUS, HEIGHT // 2 - BALL_RADIUS, BALL_RADIUS * 2, BALL_RADIUS * 2)
-
-# Ball movement direction
-ball_dx = 5
-ball_dy = random.choice([-5, 5])
-
-# Game loop
-clock = pygame.time.Clock()
-while True:
-    # Capture the current frame
-    frame = pygame.surfarray.array3d(pygame.display.get_surface())
-
-    # Convert the frame to black and white
-    bw_frame = np.dot(frame[..., :3], [0.299, 0.587, 0.114])
-
-    # Flatten the black and white image into a 1D array
-    flattened_input = bw_frame.flatten()
-
-    # Pass the flattened array as input to the neural network
-    movement = nn.propagate_input(flattened_input)
-
-    for event in pygame.event.get():
-        if event.type == QUIT:
-            nn.save_model("model")
-            pygame.quit()
-            sys.exit()
-
-    ai_paddle.y += (movement[0] - 0.5)
-
-    # Ball movement
-    ball.x += ball_dx
-    ball.y += ball_dy
-
-    # Ball collisions with walls
-    if ball.top <= 0 or ball.bottom >= HEIGHT:
-        ball_dy = -ball_dy
-
-    # Ball collision with AI paddle
-    if ball.colliderect(ai_paddle):
-        ball_dx = -ball_dx
-
-    # Ball passes AI paddle
-    if ball.right >= WIDTH:
-        # Reset ball position
-        ball.x = WIDTH // 2 - BALL_RADIUS
-        ball.y = HEIGHT // 2 - BALL_RADIUS
-        # Send ball towards the far wall
-        ball_dx = -ball_dx
-
-    # Drawing
-    screen.fill(BLACK)
-    pygame.draw.rect(screen, WHITE, ai_paddle)
-    pygame.draw.ellipse(screen, WHITE, ball)
-
-    # Cap the frame rate
-    clock.tick(FPS)
+    @classmethod
+    def load_model(cls, file_path):
+        """
+        Load a pkl file that contains a neural network. File must contain all data needed to reconstruct the network.
+        :param file_path: path to load model from
+        :return: None
+        """
+        with open(file_path, 'rb') as file:
+            loaded_model = pickle.load(file)
+        return loaded_model
