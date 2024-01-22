@@ -4,7 +4,7 @@ Dynamic-Live neural networks are a type of RNN, differing significantly in that 
 
 ## IMPORTANT NOTE:
 
-This is the alpha branch! This code is extremly unstable and changes often! If you have problems when using this then we can't help you. This specific readme may be outdated compared to the code in the alpha branch
+We are in beta! The code may have errors! If you find any open a issue!
 
 ## How does it work?
 
@@ -46,3 +46,8 @@ We welcome anyone to get involved in various areas:
 - **Bug Finding**: Testing the system and finding bugs, especially on beta releases, is invaluable. If you find one, please create a new issue.
 - **Wiki Writer**: Writing the wiki pages is invaluable. It lets other users know how the framework works and how to use it.
 - **Coding**: Contribute by writing code. You can find an issue to work on or check milestones and contribute to the next one.
+
+## License
+You may use this work for any non-commercial pupose. If you make any kind of spinoff them you must use the same license and give credit. Specific details below.
+I will not allow commercial use as of now. This may change in the future with specifc permision.
+Dynamic Live Architecture © 2023 by nochinator is licensed under CC BY-NC-SA 4.0 
