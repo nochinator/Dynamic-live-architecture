@@ -1,3 +1,6 @@
+import concurrent
+import os
+from concurrent import futures
 import pickle
 import neuron as n
 from typing import List
@@ -5,17 +8,22 @@ from typing import List
 
 class NeuralNetwork:
     def __init__(self, input_neurons: List[n.Neuron], hidden_neurons: List[n.Neuron],
-                 output_neurons: List[n.Neuron]):
+                 output_neurons: List[n.Neuron], cores=None):
         """
         create a neural network using the Neuron class.
         :param input_neurons: expected format: np.array[InputNeuron(), InputNeuron(), etc.]
         :param hidden_neurons: expected format: np.array[Neuron(), Neuron(), etc.]
         :param output_neurons: expected format: np.array[Neuron(), Neuron(), etc.]
+        :param cores:  number of virtual cpu cores to use, if unset then uses all cores, can be set when loading model
         """
         self.input_neurons = input_neurons
         self.hidden_neurons = hidden_neurons
         self.output_neurons = output_neurons
         self.network = input_neurons + hidden_neurons + output_neurons
+        if cores is None:
+            self.cores = os.cpu_count()
+        else:
+            self.cores = cores
 
     def propagate_input(self, inputs: List[float]) -> List[float]:
         """
@@ -32,9 +40,9 @@ class NeuralNetwork:
         for neuron in self.hidden_neurons + self.output_neurons:
             neuron.prime()
 
-        # Fire neurons
-        for neuron in self.network:
-            neuron.fire()
+        with concurrent.futures.ThreadPoolExecutor(max_workers=self.cores) as executor:
+            # Map the fire_neuron function to the neurons in parallel
+            executor.map(n.Neuron.fire, self.network)
 
         for neuron in self.output_neurons:
             # Fire output neuron
@@ -52,8 +60,8 @@ class NeuralNetwork:
         :return: None
         """
         # train each output neuron with the parameters
-        for i, neuron in enumerate(self.output_neurons):
-            neuron.train(reward[i], backpropagations)
+        with concurrent.futures.ThreadPoolExecutor(max_workers=self.cores) as executor:
+            executor.map(n.Neuron.train, self.output_neurons, reward, [backpropagations]*len(self.output_neurons))
 
     def save_model(self, file_path):
         """
@@ -65,12 +73,18 @@ class NeuralNetwork:
             pickle.dump(self, file)
 
     @classmethod
-    def load_model(cls, file_path):
+    def load_model(cls, file_path, cores=None):
         """
         Load a pkl file that contains a neural network. File must contain all data needed to reconstruct the network.
         :param file_path: path to load model from
+        :param cores: the number of virtual cpu cores to use, if unset then uses all cores
         :return: None
         """
         with open(file_path, 'rb') as file:
             loaded_model = pickle.load(file)
+
+        if cores is None:
+            cls.cores = os.cpu_count()
+        else:
+            cls.cores = cores
         return loaded_model

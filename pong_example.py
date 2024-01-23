@@ -13,7 +13,7 @@ learning_rate = 0.1  # create dynamic adjustment system
 # Create network
 input_neurons = [new_neuron(memory_slots=3, is_input_neuron=True) for _ in range(20000)]
 
-hidden_neurons = [new_neuron(memory_slots=3, learning_rate=learning_rate) for _ in range(1000)]
+hidden_neurons = [new_neuron(memory_slots=3, learning_rate=learning_rate) for _ in range(200)]
 
 output_neurons = [new_neuron(memory_slots=3, learning_rate=learning_rate)]
 
@@ -49,7 +49,7 @@ ball = pygame.Rect(WIDTH // 2 - BALL_RADIUS, HEIGHT // 2 - BALL_RADIUS, BALL_RAD
 
 # Ball movement direction
 ball_dx = 5
-ball_dy = random.choice([-5, 5])
+ball_dy = random.randint(-2, 2)
 
 # Game loop
 clock = pygame.time.Clock()

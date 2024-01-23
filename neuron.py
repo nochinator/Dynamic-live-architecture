@@ -68,8 +68,8 @@ class Neuron:
 
         if not self.is_input_neuron:
             # Calculate sums, take averages, and apply activation function
-            self.output = (np.sum(np.dot(self.inputs, self.synaptic_weights)) / np.sum(self.inputs)) ** 2 \
-                if np.sum(self.inputs) != 0 else 0
+            self.output = ((np.dot(self.inputs, self.synaptic_weights)) ** 2)
+            print(self.inputs)
 
             # Shift all items in array to make room for new inputs in memory
             self.output_memory = np.roll(self.input_memory, axis=0, shift=1)
@@ -117,11 +117,12 @@ class Neuron:
                         self.neuron_connections[i].train(connection_reward, backpropagations - 1, reference)
                 # reconnecting, functional but WIP, reconnects randomly, but won't when finished
                 else:
+                    self.synaptic_weights[i] = 0
                     unconnected_neurons = np.where(self.synaptic_weights == 0)
                     for connection_index in unconnected_neurons[0]:
                         if reward < 0 and np.random.uniform(0, 1) > 0.9:
                             self.synaptic_weights[connection_index] = np.random.uniform(0, 0.05)
 
-                # normalize weights to add up to 1
-                total_weight = sum(self.synaptic_weights)
-                self.synaptic_weights /= total_weight
+            # normalize weights to add up to 1
+            total_weight = sum(self.synaptic_weights)
+            self.synaptic_weights /= total_weight
