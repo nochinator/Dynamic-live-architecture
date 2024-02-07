@@ -50,7 +50,7 @@ class NeuralNetwork:
 
         return outputs
 
-    def reinforce(self, reward: List[float], backpropagations: int) -> None:
+    def reinforce(self, reward: List[float], backpropagations: int, cycles: int) -> None:
         """
         Train the network based on expected input and output
         :param reward: array with rewards for each output separately, values between -1 and 1
@@ -60,8 +60,10 @@ class NeuralNetwork:
         :return: None
         """
         # train each output neuron with the parameters
-        with concurrent.futures.ThreadPoolExecutor(max_workers=self.cores) as executor:
-            executor.map(n.Neuron.train, self.output_neurons, reward, [backpropagations]*len(self.output_neurons))
+        #with concurrent.futures.ThreadPoolExecutor(max_workers=self.cores) as executor:
+         #   executor.map(n.Neuron.train, self.output_neurons, reward, [backpropagations]*len(self.output_neurons))
+        for i in range(len(self.output_neurons)):
+            self.output_neurons[i].train(reward[i], backpropagations, cycles=cycles)
 
     def save_model(self, file_path):
         """

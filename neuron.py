@@ -20,8 +20,12 @@ class Neuron:
         self.input_memory = np.array([], dtype=np.float64)
         self.output_memory = np.array([], dtype=np.float64)
         self.neuron_connections = []
+        self.action_potential = 0
+
+        # learnable things:
         self.synaptic_weights = np.array([], dtype=np.float64)
-        self.bias = 0
+        self.decay = 0.2
+        self.threshold = 1
 
     def initialize_connections(self, network):
         """
@@ -67,8 +71,14 @@ class Neuron:
         """
 
         if not self.is_input_neuron:
-            # Calculate sums, take averages, and apply activation function
-            self.output = ((np.dot(self.inputs, self.synaptic_weights)) ** 2)
+            # Calculate sums, take averages, and update action potential
+            self.action_potential -= self.decay
+            self.action_potential += np.dot(self.inputs, self.synaptic_weights)
+
+            self.output = 0
+
+            if self.action_potential >= self.threshold:
+                self.output = 1
 
             # Shift all items in array to make room for new inputs in memory
             self.output_memory = np.roll(self.input_memory, axis=0, shift=1)
@@ -85,44 +95,43 @@ class Neuron:
         else:
             self.output = self.inputs[0]
 
-    def train(self, reward: float, backpropagations: int, reference_output=None):
+    def train(self, reward=0.5, backpropagations=0, cycles=0):
         """
         Calculate changes based on the inputted value
-        :param reward: The reward of the specific neuron
-        :param backpropagations: how many neurons to back-propagate, higher improves learning, but requires more compute
-        :param reference_output: Used to provide context to the neuron(s)
+        :param reward: The reward of the specific neurons output, between -1 and 1
+        :param backpropagations: how many neurons to back-propagate, higher improves network learning, but requires more compute
+        :param cycles: reference to x time steps back, 0 is the latest time step, limited by neurons memory size
         :return: None
         """
-        if not self.is_input_neuron:
-            # check for context
-            if reference_output is not None:
-                memory_index = np.argmax(self.output_memory == reference_output)
-            else:
-                memory_index = 0
+        if not self.is_input_neuron and cycles < len(self.input_memory) and cycles < len(self.output_memory):
+            # get input context
+            input_context = self.input_memory[cycles]
+            output_context = self.output_memory[cycles]
+            print(input_context)
+            print(output_context)
+            print()
 
             for i in range(len(self.synaptic_weights)):
                 # check if the neuron is connected or not
                 if self.synaptic_weights[i] > 0:
-                    # get context
-                    reference = self.input_memory[memory_index, i]
-                    # modify weights
-                    self.synaptic_weights[i] += self.learning_rate * reward * reference
-
                     # Increment memory by 1 and pass the signal to each connected neuron
                     if backpropagations > 1:
                         # Back-propagate to the other neurons
-                        connection_reward = reward / len(self.neuron_connections)  # under research functional but WIP
-                        self.neuron_connections[i].train(connection_reward, backpropagations - 1, reference)
-                # reconnecting, functional but WIP, reconnects randomly, but won't when finished
-                elif self.synaptic_weights[i] <= 0:
-                    self.synaptic_weights[i] = 0
-                    unconnected_neurons = np.where(self.synaptic_weights == 0)
-                    for connection_index in unconnected_neurons[0]:
-                        if reward < 0 and np.random.uniform(0, 1) > 0.9:
-                            self.synaptic_weights[connection_index] = np.random.uniform(0, 0.05)
-                else:
-                    print("PROBLEM! REPORT ON GITHUB! say it is a weight greater than 1.")
+                        self.neuron_connections[i].train(reward * self.synaptic_weights[i], backpropagations - 1, cycles + 1)
 
-            # normalize weights to add up to 1
+                # modify weights
+                if input_context[i] == 1:
+                    if output_context == 1:
+                        self.synaptic_weights[i] += 1 * reward * self.learning_rate
+                    else:
+                        self.synaptic_weights[i] += 0.2 * reward * self.learning_rate
+
+                # if the weight is less than 0 then make it zero to fix normalization
+                if self.synaptic_weights[i] < 0:
+                    self.synaptic_weights[i] = 0
+
+            # normalize all weights to add up to 1
             total_weight = sum(self.synaptic_weights)
             self.synaptic_weights /= total_weight
+
+            #print(self.synaptic_weights)

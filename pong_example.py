@@ -33,7 +33,6 @@ pygame.init()
 
 # Constants
 WIDTH, HEIGHT = 1, 10
-PADDLE_WIDTH, PADDLE_HEIGHT = 5, 25
 FPS = 60
 WHITE = (255, 255, 255)
 GREY = (128, 128, 128)
@@ -44,7 +43,8 @@ screen = pygame.display.set_mode((WIDTH, HEIGHT))
 pygame.display.set_caption("Pong AI")
 
 # dot position. should start centered
-ai_paddle = pygame.Rect(1, 1, 1, 1)
+dot = pygame.Rect(1, 1, 1, 1)
+taget = pygame
 
 # Game loop
 clock = pygame.time.Clock()
@@ -67,14 +67,6 @@ while True:
             nn.save_model("model")
             pygame.quit()
             sys.exit()
-
-    ai_paddle.y += (movement[0] - 0.5) * 4
-
-    # restict paddle movement
-    if ai_paddle.y > 10:
-        ai_paddle.y = 10
-    elif ai_paddle.y < 0:
-        ai_paddle.y = 0
 
     # Drawing
     screen.fill(BLACK)
