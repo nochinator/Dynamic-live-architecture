@@ -31,7 +31,6 @@ class NeuralNetwork:
         :param inputs: array of shape *number of input neurons*
         :return: network outputs
         """
-
         outputs = []
 
         # Prime neurons
@@ -43,11 +42,9 @@ class NeuralNetwork:
         with concurrent.futures.ThreadPoolExecutor(max_workers=self.cores) as executor:
             # Map the fire_neuron function to the neurons in parallel
             executor.map(n.Neuron.fire, self.network)
-
         for neuron in self.output_neurons:
             # Fire output neuron
             outputs.append(neuron.output)
-
         return outputs
 
     def reinforce(self, reward: List[float], backpropagations: int, cycles: int) -> None:
@@ -60,10 +57,8 @@ class NeuralNetwork:
         :return: None
         """
         # train each output neuron with the parameters
-        #with concurrent.futures.ThreadPoolExecutor(max_workers=self.cores) as executor:
-         #   executor.map(n.Neuron.train, self.output_neurons, reward, [backpropagations]*len(self.output_neurons))
-        for i in range(len(self.output_neurons)):
-            self.output_neurons[i].train(reward[i], backpropagations, cycles=cycles)
+        with concurrent.futures.ThreadPoolExecutor(max_workers=self.cores) as executor:
+            executor.map(n.Neuron.train, self.output_neurons, reward, [backpropagations]*len(self.output_neurons), [cycles]*len(self.output_neurons))
 
     def save_model(self, file_path):
         """
