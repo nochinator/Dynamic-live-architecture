@@ -3,23 +3,21 @@ import neurons
 import numpy as np
 
 
-new_neuron = neuron.Neuron
-
 # XOR data
-X_train = np.array([[0, 0], [0, 1], [1, 1], [1, 0]])
-y_train = np.array([[0], [1], [0], [1]])
+X_train = [[0, 0], [0, 1], [1, 1], [1, 0]]
+y_train = [[0], [1], [0], [1]]
 learning_rate = 0.1
 
 # Create neurons
-input_neurons = [new_neuron(memory_slots=5, time_sensitive_neuron=False, is_input_neuron=True) for _ in range(2)]
-hidden_neurons = [new_neuron(memory_slots=5, time_sensitive_neuron=False, learning_rate=learning_rate) for _ in range(2)]
-output_neurons = [new_neuron(memory_slots=5, time_sensitive_neuron=False, learning_rate=learning_rate)]
+input_neurons = [neurons.InputNeuron((0, 0)) for _ in range(2)]
+hidden_neurons = [neurons.HiddenNeuron((0, 1), learning_rate=learning_rate) for _ in range(2)]
+output_neurons = [neurons.AnchorNeuron((0, 2), learning_rate=learning_rate)]
 
 # Initialize connections
-hidden_neurons[0].initialize_connections(input_neurons)
-hidden_neurons[1].initialize_connections(input_neurons)
+hidden_neurons[0].initialize_neuron(input_neurons)
+hidden_neurons[1].initialize_neuron(input_neurons)
 
-output_neurons[0].initialize_connections(hidden_neurons)
+output_neurons[0].initialize_neuron(hidden_neurons)
 
 # create the network manager for easier usage of neurons
 neural_network = network_manager.NeuralNetwork(
@@ -43,5 +41,6 @@ for epoch in range(epochs):
             reward = [False]
         neural_network.reinforce(reward, 5, 0)
         output.append(result)
-    print(f"\nEpoch {epoch}: Predictions - {[round(prediction[0], 3) for prediction in output]}, Expected - {y_train.flatten()}", end=' ')
+    print(f"\nEpoch {epoch}: Predictions - {[round(prediction[0], 3) for prediction in output]}, Expected - "
+          f"{y_train.flatten()}", end=' ')
 print("done")

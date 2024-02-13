@@ -33,32 +33,32 @@ class NeuralNetwork:
         """
         outputs = []
 
-        # Prime neurons
+        # give input, firing inputs before priming reduces reaction speed by one cycle with no downside
         for i, neuron in enumerate(self.input_neurons):
-            neuron.prime(inputs[i])
+            neuron.fire(inputs[i])
+
+        # Prime neurons
         for neuron in self.hidden_neurons + self.output_neurons:
             neuron.prime()
 
+        # fire neurons
         with concurrent.futures.ThreadPoolExecutor(max_workers=self.cores) as executor:
             # Map the fire_neuron function to the neurons in parallel
             executor.map(n.Neuron.fire, self.network)
+
+        # collect output
         for neuron in self.output_neurons:
-            # Fire output neuron
             outputs.append(neuron.output)
         return outputs
 
-    def reinforce(self, reward: List[float], backpropagations: int, cycles: int) -> None:
+    def train(self):
         """
-        Train the network based on expected input and output
-        :param reward: array with rewards for each output separately, values between -1 and 1
-        :param backpropagations: How many neurons to backpropogate through, higher values result in better fine-tuning
-        but an exponential increase in compute required. Low values on large networks will result in some neurons
-        never training
+        Train the network with hebbian learning
         :return: None
         """
         # train each output neuron with the parameters
         with concurrent.futures.ThreadPoolExecutor(max_workers=self.cores) as executor:
-            executor.map(n.Neuron.train, self.output_neurons, reward, [backpropagations]*len(self.output_neurons), [cycles]*len(self.output_neurons))
+            executor.map(n.Neuron.train, (self.hidden_neurons + self.output_neurons))
 
     def save_model(self, file_path):
         """

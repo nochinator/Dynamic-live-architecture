@@ -3,7 +3,7 @@ import network_manager
 import numpy
 
 
-new_neuron = neuron.Neuron
+new_neuron = neurons.Neuron
 learning_rate = 0.1  # create dynamic adjustment system
 
 # Create network
