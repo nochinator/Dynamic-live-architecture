@@ -2,7 +2,7 @@ import concurrent
 import os
 from concurrent import futures
 import pickle
-import neuron as n
+import neurons as n
 from typing import List
 
 

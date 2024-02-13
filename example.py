@@ -1,5 +1,5 @@
 import network_manager
-import neuron
+import neurons
 import numpy as np
 
 

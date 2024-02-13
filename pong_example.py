@@ -1,4 +1,4 @@
-import neuron
+import neurons
 import network_manager
 import numpy as np
 import pygame
