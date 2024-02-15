@@ -7,8 +7,8 @@ from typing import List
 
 
 class NeuralNetwork:
-    def __init__(self, input_neurons: List[n.Neuron], hidden_neurons: List[n.Neuron],
-                 output_neurons: List[n.Neuron], cores=None):
+    def __init__(self, input_neurons: List[n.InputNeuron], hidden_neurons: List[n.HiddenNeuron],
+                 output_neurons: List[n.AnchorNeuron] or List[n.HiddenNeuron], cores=None):
         """
         create a neural network using the Neuron class.
         :param input_neurons: expected format: np.array[InputNeuron(), InputNeuron(), etc.]
@@ -44,7 +44,9 @@ class NeuralNetwork:
         # fire neurons
         with concurrent.futures.ThreadPoolExecutor(max_workers=self.cores) as executor:
             # Map the fire_neuron function to the neurons in parallel
-            executor.map(n.Neuron.fire, self.network)
+            executor.map(n.HiddenNeuron.fire, self.network)
+            executor.map(n.AnchorNeuron.fire, self.network)
+
 
         # collect output
         for neuron in self.output_neurons:
@@ -58,7 +60,8 @@ class NeuralNetwork:
         """
         # train each output neuron with the parameters
         with concurrent.futures.ThreadPoolExecutor(max_workers=self.cores) as executor:
-            executor.map(n.Neuron.train, (self.hidden_neurons + self.output_neurons))
+            executor.map(n.HiddenNeuron.train, (self.hidden_neurons + self.output_neurons))
+            executor.map(n.AnchorNeuron.train, (self.hidden_neurons + self.output_neurons))
 
     def save_model(self, file_path):
         """

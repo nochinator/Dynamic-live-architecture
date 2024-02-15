@@ -1,7 +1,10 @@
+import time
 import network_manager
 import neurons
-import numpy as np
 
+# !!!! IMPORTANT !!!
+# This file will be completely re-made after re-implementation
+# the XOR problem is not a suitable problem for DLA
 
 # XOR data
 X_train = [[0, 0], [0, 1], [1, 1], [1, 0]]
@@ -9,9 +12,10 @@ y_train = [[0], [1], [0], [1]]
 learning_rate = 0.1
 
 # Create neurons
-input_neurons = [neurons.InputNeuron((0, 0)) for _ in range(2)]
-hidden_neurons = [neurons.HiddenNeuron((0, 1), learning_rate=learning_rate) for _ in range(2)]
-output_neurons = [neurons.AnchorNeuron((0, 2), learning_rate=learning_rate)]
+input_neurons = [neurons.InputNeuron((0, 0)) for _ in range(1)]
+hidden_neurons = [neurons.HiddenNeuron(1, (0, 1), learning_rate) for _ in range(999)]
+output_neurons = [neurons.AnchorNeuron(1, (0, 2), learning_rate)]
+network = input_neurons + hidden_neurons + output_neurons
 
 # Initialize connections
 hidden_neurons[0].initialize_neuron(input_neurons)
@@ -26,21 +30,23 @@ neural_network = network_manager.NeuralNetwork(
     output_neurons=output_neurons,
 )
 
-# Train the neural network on XOR data
-epochs = 1000
-for epoch in range(epochs):
-    output = []
-    for i in range(len(X_train)):
-        # predict with the network
-        result = neural_network.propagate_input(X_train[i])
+# Function to make predictions
+def make_predictions(X, duration):
+    start_time = time.time()
+    end_time = start_time + duration
+    predictions_made = 0
 
-        # train the network
-        if result == y_train[i]:
-            reward = [True]
-        else:
-            reward = [False]
-        neural_network.reinforce(reward, 5, 0)
-        output.append(result)
-    print(f"\nEpoch {epoch}: Predictions - {[round(prediction[0], 3) for prediction in output]}, Expected - "
-          f"{y_train.flatten()}", end=' ')
-print("done")
+    while time.time() < end_time:
+        neural_network.propagate_input(X)
+        neural_network.train()
+        predictions_made += 1
+
+    return predictions_made
+
+
+# Perform predictions for 10 seconds
+duration = 10
+total_predictions = make_predictions(X_train[1], duration)
+
+print(total_predictions)
+print(total_predictions / 10)
