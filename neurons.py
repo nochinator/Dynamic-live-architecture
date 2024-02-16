@@ -26,7 +26,9 @@ class HiddenNeuron:
         :param learning_rate: how quickly to change the weights when training
         """
         # Save values of initialization
-        self.memory = np.zeros(memory_slots, dtype=np.float32)
+        self.input_memory = np.zeros(memory_slots, dtype=np.float32)
+        self.output_memory = np.zeros(memory_slots, dtype=np.float32)
+        self.memory_index = 0
         self.learning_rate = learning_rate
         self.position = position
 
@@ -57,7 +59,7 @@ class HiddenNeuron:
         self.synaptic_weights = np.full(len(self.network), np.float32(0))
         for i in range(len(self.network)):
             if self.nearby(self.network[i]):
-                self.synaptic_weights[i] = np.float32(random.uniform(-0.5, 1.0))
+                self.synaptic_weights[i] = np.float32(random.uniform(0.0, 1.0))
 
         self.synaptic_weights[self.synaptic_weights < np.float32(0)] = np.float32(0)  # Ensure non-negative weights
 
@@ -71,7 +73,12 @@ class HiddenNeuron:
         Always call before firing the neurons in the network, will get inputs auto-magically
         :return: None
         """
+        # get intputs
         self.inputs = np.array([neuron.output for neuron in self.network if self.nearby(neuron)], dtype=np.float32)
+
+        # update memory
+        self.input_memory[self.memory_index] = self.inputs
+        self.memory_index = (self.memory_index + 1) % len(self.output_memory)
 
     def fire(self):
         """
@@ -80,19 +87,37 @@ class HiddenNeuron:
         training after every fire is recommended
         :return: None, get the output from neuron.output
         """
+        # calculate output
         self.output = np.dot(self.inputs, self.synaptic_weights)
-        self.output = max(np.float32(0), min(self.output, np.float32(1)))
 
-    def train(self):
+        # update memory
+        self.output_memory[self.memory_index] = self.output
+        self.memory_index = (self.memory_index + 1) % len(self.output_memory)
+
+    def train(self, cycle: int, context_size: int):
         """
         Use hebbian learning to train the weights in the network and move the neurons around. Requires no data.
+        :param cycle: how many cycles back in memory to consider the start of context, 0 is the most recent cycle
+        :param context_size: how many neurons back from the start of context to consider in context
         :return: None
+        note: context_size + cycle can NOT be more than (but can be equal to) the number of memory slots
         """
+        if context_size + cycle > len(self.output_memory):
+            print("invalid training context, can not access data further back than amount of memory slots")
+            return
+
+        # Prepare to get context
+        start_index = (self.memory_index - cycle) % len(self.output_memory)
+
+        # Actually get context
+        input_context = np.sum(self.input_memory[start_index: start_index - context_size: -1], axis=0) / context_size
+        output_context = np.sum(self.output_memory[start_index: start_index - context_size: -1]) / context_size
+
         # Update synaptic weights
         for i, weight in enumerate(self.synaptic_weights):
             if self.nearby(self.network[i]):
                 # Apply Hebbian-like learning rule to synaptic weights
-                weight += self.learning_rate * self.inputs[i] * self.output
+                weight += self.learning_rate * input_context[i] * output_context
 
                 # Ensure non-negative weights
                 self.synaptic_weights[i] = max(np.float32(0), weight)
@@ -125,7 +150,9 @@ class AnchorNeuron:
         :param learning_rate: how quickly to change the weights when training
         """
         # Save values of initialization
-        self.memory = np.zeros(memory_slots, dtype=np.float32)
+        self.input_memory = np.zeros(memory_slots, dtype=np.float32)
+        self.output_memory = np.zeros(memory_slots, dtype=np.float32)
+        self.memory_index = 0
         self.learning_rate = learning_rate
         self.position = position
 
@@ -156,7 +183,7 @@ class AnchorNeuron:
         self.synaptic_weights = np.full(len(self.network), np.float32(0))
         for i in range(len(self.network)):
             if self.nearby(self.network[i]):
-                self.synaptic_weights[i] = np.float32(random.uniform(-0.5, 1.0))
+                self.synaptic_weights[i] = np.float32(random.uniform(0.0, 1.0))
 
         self.synaptic_weights[self.synaptic_weights < np.float32(0)] = np.float32(0)  # Ensure non-negative weights
 
@@ -170,28 +197,60 @@ class AnchorNeuron:
         Always call before firing the neurons in the network, will get inputs auto-magically
         :return: None
         """
+        # get inputs
         self.inputs = np.array([neuron.output for neuron in self.network if self.nearby(neuron)], dtype=np.float32)
+
+        # update memory
+        self.input_memory[self.memory_index] = self.inputs
+        self.memory_index = (self.memory_index + 1) % len(self.output_memory)
 
     def fire(self):
         """
         Make a prediction with the neuron based on the input collected by the prime function
         :return: None, get the output from neuron.output
         """
+        # calculate output
         self.output = np.dot(self.inputs, self.synaptic_weights)
 
-    def train(self):
+        # update memory
+        self.output_memory[self.memory_index] = self.output
+        self.memory_index = (self.memory_index + 1) % len(self.output_memory)
+
+    def train(self, cycle: int, context_size: int):
         """
         Use hebbian learning to train the weights in the network and move the neurons around. Requires no data.
+        :param cycle: how many cycles back in memory to consider the start of context, 0 is the most recent cycle
+        :param context_size: how many neurons back from the start of context to consider in context
         :return: None
+        note: context_size + cycle can NOT be more than (but can be equal to) the number of memory slots
         """
+        if context_size + cycle > len(self.output_memory):
+            print("invalid training context, can not access data further back than amount of memory slots")
+            return
+
+        # prepare to get context
+        start_index = (self.memory_index - cycle) % len(self.output_memory)
+        input_context = np.zeros_like(self.input_memory[0])
+
+        output_context = 0
+
+        # actually get context
+        for i in range(start_index, start_index - context_size, -1):
+            input_context += self.input_memory[i % len(self.output_memory)]
+            output_context += self.output_memory[i % len(self.output_memory)]
+
+        # average context
+        input_context /= context_size
+        output_context /= context_size
+
         # Update synaptic weights
-        for i in range(len(self.network)):
+        for i, weight in enumerate(self.synaptic_weights):
             if self.nearby(self.network[i]):
                 # Apply Hebbian-like learning rule to synaptic weights
-                self.synaptic_weights[i] += self.learning_rate * self.inputs[i] * self.output
+                weight += self.learning_rate * input_context[i] * output_context
 
                 # Ensure non-negative weights
-                self.synaptic_weights[i] = max(np.float32(0), self.synaptic_weights[i])
+                self.synaptic_weights[i] = max(np.float32(0), weight)
 
         # Normalize weights to add up to 1
         total_weight = sum(self.synaptic_weights)
