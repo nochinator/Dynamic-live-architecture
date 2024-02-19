@@ -1,6 +1,7 @@
 import numpy as np
 import random
 
+
 class InputNeuron:
     def __init__(self, position: tuple):
         """
@@ -26,7 +27,7 @@ class HiddenNeuron:
         :param learning_rate: how quickly to change the weights when training
         """
         # Save values of initialization
-        self.input_memory = np.zeros(memory_slots, dtype=np.float32)
+        self.input_memory = None
         self.output_memory = np.zeros(memory_slots, dtype=np.float32)
         self.memory_index = 0
         self.learning_rate = learning_rate
@@ -34,51 +35,52 @@ class HiddenNeuron:
 
         # Prep variables for use
         self.output = np.float32(0)
-        self.inputs = np.array([], dtype=np.float32)
+        self.inputs = None
         self.network = []
-
-        # learnable things:
-        self.synaptic_weights = np.array([], dtype=np.float32)
+        self.synaptic_weights = None
 
     def nearby(self, neuron):
         x1, y1 = neuron.position
         x2, y2 = self.position
-        if np.sqrt((x2 - x1) ** np.float32(2) + (y2 - y1) ** np.float32(2)) <= np.float32(1):
-            return True
-        else:
-            return False
+        distance = np.sqrt((x2 - x1) ** np.float32(2) + (y2 - y1) ** np.float32(2))
+        return distance <= np.float32(1)
 
     def initialize_neuron(self, network):
         """
         Connect this neuron to neighboring neurons with random weights
-        :param network: list of neurons that this neuron can connect to
+        :param network: list of every neuron in the network
         :return: None
         """
-        # Create connections and assign proper connection strengths
         self.network = network
-        self.synaptic_weights = np.full(len(self.network), np.float32(0))
-        for i in range(len(self.network)):
-            if self.nearby(self.network[i]):
-                self.synaptic_weights[i] = np.float32(random.uniform(0.0, 1.0))
 
-        self.synaptic_weights[self.synaptic_weights < np.float32(0)] = np.float32(0)  # Ensure non-negative weights
+        # Calculate distances between neurons
+        distances = np.linalg.norm(np.array(self.position) - np.array([neuron.position for neuron in network]), axis=1)
+
+        # Initialize synaptic weights with random values
+        self.synaptic_weights = np.where(distances <= 1, np.random.uniform(0, 1, len(distances)), 0)
 
         # Normalize weights to sum up to 1
         total_weight = np.sum(self.synaptic_weights)
-        if total_weight != np.float32(0):
-            self.synaptic_weights = self.synaptic_weights / total_weight
+        if total_weight != 0:
+            self.synaptic_weights /= total_weight
+
+        # setup self.input_memory
+        self.input_memory = np.zeros((len(self.output_memory), len(self.network)), dtype=np.float32)
 
     def prime(self):
         """
         Always call before firing the neurons in the network, will get inputs auto-magically
         :return: None
         """
-        # get intputs
-        self.inputs = np.array([neuron.output for neuron in self.network if self.nearby(neuron)], dtype=np.float32)
+        # get inputs
+        nearby_mask = np.array([self.nearby(neuron) for neuron in self.network], dtype=bool)
+        nearby_outputs = np.array([neuron.output for neuron in np.array(self.network)[nearby_mask]], dtype=np.float32)
+        self.inputs = np.zeros(len(self.network), dtype=np.float32)
+        self.inputs[nearby_mask] = nearby_outputs
+        self.inputs = np.reshape(self.inputs, (1, len(self.network)))  # Reshape inputs to match input_memory
 
         # update memory
         self.input_memory[self.memory_index] = self.inputs
-        self.memory_index = (self.memory_index + 1) % len(self.output_memory)
 
     def fire(self):
         """
@@ -92,6 +94,8 @@ class HiddenNeuron:
 
         # update memory
         self.output_memory[self.memory_index] = self.output
+
+        # update memory position
         self.memory_index = (self.memory_index + 1) % len(self.output_memory)
 
     def train(self, cycle: int, context_size: int):
@@ -139,18 +143,19 @@ class HiddenNeuron:
 
                 # Move neurons
                 self.position = tuple(np.array(self.position) + norm_vector1)
-                self.neuron_connections[i].position = tuple(np.array(neuron.position) + norm_vector2)
+                neuron.position = tuple(np.array(neuron.position) + norm_vector2)
+
 
 
 class AnchorNeuron:
     def __init__(self, memory_slots: int, position: tuple, learning_rate=np.float32(0.1)):
         """
-        Create a hidden neuron.
-        :param position: the starting position of the hidden neuron, the neuron will NOT move around, use 2D tuples.
+        Create an anchor neuron.
+        :param position: the starting position of the hidden neuron, the neuron will NOT move around
         :param learning_rate: how quickly to change the weights when training
         """
         # Save values of initialization
-        self.input_memory = np.zeros(memory_slots, dtype=np.float32)
+        self.input_memory = None
         self.output_memory = np.zeros(memory_slots, dtype=np.float32)
         self.memory_index = 0
         self.learning_rate = learning_rate
@@ -158,39 +163,37 @@ class AnchorNeuron:
 
         # Prep variables for use
         self.output = np.float32(0)
-        self.inputs = np.array([], dtype=np.float32)
+        self.inputs = None
         self.network = []
-
-        # learnable things:
-        self.synaptic_weights = np.array([], dtype=np.float32)
+        self.synaptic_weights = None
 
     def nearby(self, neuron):
         x1, y1 = neuron.position
         x2, y2 = self.position
-        if np.sqrt((x2 - x1) ** np.float32(2) + (y2 - y1) ** np.float32(2)) <= np.float32(1):
-            return True
-        else:
-            return False
+        squared_distance = (x2 - x1) + (y2 - y1)
+        return squared_distance <= 1
 
     def initialize_neuron(self, network):
         """
         Connect this neuron to neighboring neurons with random weights
-        :param network: list of neurons that this neuron can connect to
+        :param network: list every neuron in the network
         :return: None
         """
-        # Create connections and assign proper connection strengths
         self.network = network
-        self.synaptic_weights = np.full(len(self.network), np.float32(0))
-        for i in range(len(self.network)):
-            if self.nearby(self.network[i]):
-                self.synaptic_weights[i] = np.float32(random.uniform(0.0, 1.0))
 
-        self.synaptic_weights[self.synaptic_weights < np.float32(0)] = np.float32(0)  # Ensure non-negative weights
+        # Calculate distances between neurons
+        distances = np.linalg.norm(np.array(self.position) - np.array([neuron.position for neuron in network]), axis=1)
+
+        # Initialize synaptic weights with random values
+        self.synaptic_weights = np.where(distances <= 1, np.random.uniform(0, 1, len(distances)), 0)
 
         # Normalize weights to sum up to 1
         total_weight = np.sum(self.synaptic_weights)
-        if total_weight != np.float32(0):
-            self.synaptic_weights = self.synaptic_weights / total_weight
+        if total_weight != 0:
+            self.synaptic_weights /= total_weight
+
+        # setup self.input_memory
+        self.input_memory = np.zeros((len(self.output_memory), len(self.network)), dtype=np.float32)
 
     def prime(self):
         """
@@ -198,15 +201,19 @@ class AnchorNeuron:
         :return: None
         """
         # get inputs
-        self.inputs = np.array([neuron.output for neuron in self.network if self.nearby(neuron)], dtype=np.float32)
+        self.inputs = np.array([neuron.output if self.nearby(neuron) else np.float32(0) for neuron in self.network],
+                               dtype=np.float32)
+
+        self.inputs = np.reshape(self.inputs, (1, len(self.network)))  # Reshape inputs to match input_memory
 
         # update memory
         self.input_memory[self.memory_index] = self.inputs
-        self.memory_index = (self.memory_index + 1) % len(self.output_memory)
 
     def fire(self):
         """
         Make a prediction with the neuron based on the input collected by the prime function
+
+        training after every fire is recommended
         :return: None, get the output from neuron.output
         """
         # calculate output
@@ -214,6 +221,8 @@ class AnchorNeuron:
 
         # update memory
         self.output_memory[self.memory_index] = self.output
+
+        # update memory position
         self.memory_index = (self.memory_index + 1) % len(self.output_memory)
 
     def train(self, cycle: int, context_size: int):
@@ -228,20 +237,12 @@ class AnchorNeuron:
             print("invalid training context, can not access data further back than amount of memory slots")
             return
 
-        # prepare to get context
+        # Prepare to get context
         start_index = (self.memory_index - cycle) % len(self.output_memory)
-        input_context = np.zeros_like(self.input_memory[0])
 
-        output_context = 0
-
-        # actually get context
-        for i in range(start_index, start_index - context_size, -1):
-            input_context += self.input_memory[i % len(self.output_memory)]
-            output_context += self.output_memory[i % len(self.output_memory)]
-
-        # average context
-        input_context /= context_size
-        output_context /= context_size
+        # Actually get context
+        input_context = np.sum(self.input_memory[start_index: start_index - context_size: -1], axis=0) / context_size
+        output_context = np.sum(self.output_memory[start_index: start_index - context_size: -1]) / context_size
 
         # Update synaptic weights
         for i, weight in enumerate(self.synaptic_weights):
@@ -255,15 +256,3 @@ class AnchorNeuron:
         # Normalize weights to add up to 1
         total_weight = sum(self.synaptic_weights)
         self.synaptic_weights /= total_weight
-
-        # move neurons
-        for i, neuron in enumerate(self.network):
-            if self.nearby(neuron):
-                # Calculate vector of other neuron, self will not move
-                vector2 = np.array(self.position) - np.array(neuron.position)
-
-                # Normalize and scale vector
-                norm_vector2 = (vector2 / np.linalg.norm(vector2)) * self.synaptic_weights[i]
-
-                # Move neuron
-                neuron.position = tuple(np.array(neuron.position) + norm_vector2)

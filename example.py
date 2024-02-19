@@ -11,18 +11,20 @@ X_train = [[0, 0], [0, 1], [1, 1], [1, 0]]
 y_train = [[0], [1], [0], [1]]
 learning_rate = 0.1
 
+print("making neurons")
+
 # Create neurons
 input_neurons = [neurons.InputNeuron((0, 0)) for _ in range(1)]
-hidden_neurons = [neurons.HiddenNeuron(1, (0, 1), learning_rate) for _ in range(999)]
-output_neurons = [neurons.AnchorNeuron(1, (0, 2), learning_rate)]
+hidden_neurons = [neurons.HiddenNeuron(50, (0, 1), learning_rate) for _ in range(999)]
+output_neurons = [neurons.AnchorNeuron(50, (0, 2), learning_rate)]
 network = input_neurons + hidden_neurons + output_neurons
+print("initializing neurons")
 
 # Initialize connections
-hidden_neurons[0].initialize_neuron(input_neurons)
-hidden_neurons[1].initialize_neuron(input_neurons)
+for neuron in hidden_neurons + output_neurons:
+    neuron.initialize_neuron(network)
 
-output_neurons[0].initialize_neuron(hidden_neurons)
-
+print("creating network")
 # create the network manager for easier usage of neurons
 neural_network = network_manager.NeuralNetwork(
     input_neurons=input_neurons,
@@ -38,11 +40,12 @@ def make_predictions(X, duration):
 
     while time.time() < end_time:
         neural_network.propagate_input(X)
-        neural_network.train()
+        # neural_network.train(0, 10)
         predictions_made += 1
 
     return predictions_made
 
+print("training")
 
 # Perform predictions for 10 seconds
 duration = 10
