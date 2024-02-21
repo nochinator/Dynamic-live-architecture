@@ -101,9 +101,10 @@ class HiddenNeuron:
         # update memory position
         self.memory_index = (self.memory_index + 1) % len(self.output_memory)
 
-    def train(self, cycle: int, context_size: int):
+    def train(self, cycle: int, context_size: int, reward: float):
         """
         Use hebbian learning to train the weights in the network and move the neurons around. Requires no data.
+        :param reward: A modifier value for training. Tells the network how good or bad it did, between -1 and 1
         :param cycle: how many cycles back in memory to consider the start of context, 0 is the most recent cycle
         :param context_size: how many neurons back from the start of context to consider in context
         :return: None
@@ -125,7 +126,7 @@ class HiddenNeuron:
         for i, weight in enumerate(self.synaptic_weights):
             if distances[i] < 1 or weight > 0.01:  # 1 is hyperparameter
                 # Apply Hebbian-like learning rule to synaptic weights
-                weight += self.learning_rate * input_context[i] * output_context
+                weight += self.learning_rate * input_context[i] * output_context * reward
 
                 # Ensure non-negative weights
                 self.synaptic_weights[i] = max(np.float32(0), weight)
@@ -227,9 +228,10 @@ class AnchorNeuron:
         # update memory position
         self.memory_index = (self.memory_index + 1) % len(self.output_memory)
 
-    def train(self, cycle: int, context_size: int):
+    def train(self, cycle: int, context_size: int, reward: float):
         """
         Use hebbian learning to train the weights in the network and move the neurons around. Requires no data.
+        :param reward: A modifier value for training. Tells the network how good or bad it did, between -1 and 1
         :param cycle: how many cycles back in memory to consider the start of context, 0 is the most recent cycle
         :param context_size: how many neurons back from the start of context to consider in context
         :return: None
@@ -251,7 +253,7 @@ class AnchorNeuron:
         for i, weight in enumerate(self.synaptic_weights):
             if distances[i] < 1 or weight > 0.01:  # 1 is hyperparameter
                 # Apply Hebbian-like learning rule to synaptic weights
-                weight += self.learning_rate * input_context[i] * output_context
+                weight += self.learning_rate * input_context[i] * output_context * reward
 
                 # Ensure non-negative weights
                 self.synaptic_weights[i] = max(np.float32(0), weight)
