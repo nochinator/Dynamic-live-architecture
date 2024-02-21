@@ -4,7 +4,7 @@ Dynamic-Live neural networks are a type of RNN, differing significantly in that 
 
 ## IMPORTANT NOTE:
 
-We are in beta! The code may have errors! If you find any open a issue!
+This is the ALPHA branch. The code will be very buggy, and likely won't even work properly work
 
 ## How does it work?
 
@@ -12,31 +12,39 @@ Some of the main features of this framework are still a work in progress (WIP). 
 
 ### Input Propagation
 
-A function similar to this is included in every neural network framework that I can find. The functions below are called on each layer of the network in order. Keep in mind that the order of layers only determines the order neurons are fired, which can help get results out in fewer cycles. It does not determine which neurons can connect where.
+A function similar to this is included in every neural network framework that I can find. The two functions below are called on every neuron, first priming, then firing.
 
 #### Priming
 
-This step involves the neuron fetching its inputs from each connected neuron. We can't retrieve inputs when firing neurons, as doing so could cause issues with the data that the neurons receive, depending on the user's network architecture.
+This step involves the neuron fetching its inputs from each connected neuron. We can't retrieve inputs when firing neurons, as doing so could cause issues with the data that the neurons receive, depending on the network structure.
 
 #### Firing
 
-Each neuron in a layer undergoes firing, which entails taking the sum of the dot product of the weights stored in the neuron and the inputs obtained during the priming step. For an activation function, we square it; currently, it's not user-selectable, but this will likely change in the future. After every neuron has fired, the output of each neuron in the output layer is collected into an array and returned.
+Each neuron in the network undergoes firing, which entails taking the dot product of the weights stored in the neuron and the inputs obtained during the priming step. We do not use an activation function as non-linearity is introduced in the structure of the network. After every neuron has fired, the output of each neuron in the output layer is collected into an array and returned.
 
 ### Training
 
-This is one of the biggest differences from other networks. We currently only support reinforcement, but this could change if someone can figure out how to implement another type of training in this framework.
+This is one of the biggest differences from other networks. We currently only support reinforcement, but this could change if someone can figure out how to implement gradient decent training in this framework.
 
-#### Backpropagation
+#### Hebbian Learning
 
-Unlike traditional reinforcement methods that give the reward to everything and everything makes updates, we use concepts of backpropagation for reinforcement. The process starts with collecting memory data in the background during priming and firing steps, up to a user-defined limit. This data doesn't influence predictions but provides context for training, particularly in complex networks where a neuron's actions might not manifest until several cycles later. When the training function is called on a neuron, it receives reference output. This is used to find what input to make changes based on. We do this to support recurrent network and similar so the neurons can train based on the proper input. The neuron runs your reward score (positive or negative) through a math function that updates the weights/connection strengths of the neuron. The weights are then normalized so they add up to 1. Finaly, for every neuron it takes input from, it calls this same function, distributing the reward score among them and giving them proper reference.
+To explain the learning mechanism you must know what hebbian learning is, this can be described as "neurons that fire together, wire together". The following equation is run for every connection. `weight += output of self * output of connected neuron` This method is inspired from real, biological neurons.
 
-#### Connection Training
+#### Directing Training
 
-This is very much WIP and can change at any time! As of now, the neuron looks at every neuron it can connect to but is not connected to, and, if the reward was negative, has a 1/10 chance to reconnect.
+Hebbian learning alone has no direction, it will only learn patterns in the data and will only give nonsensical output. to fix this we provide a reward value so the equation becomes `weight += output of self * output of connected neuron * reward` The reward value can be positive or negative, allowing for the strength of connections to strengthen or weaken.
+
+#### Connecting Neurons
+
+So now we can train towards a desired value, but how do we know if two neurons should be connected or not? Well we could just say that every neuron is connected, but then we would form too many connections, so let's have a positioning system and only neurons that are nearby can connect.
+
+#### Moving Neurons Around
+
+
 
 ## How do I download this?
 
-Look on the right side panel for the section labeled releases. The item displayed there is the latest full release. As of now, these are beta releases.
+Look on the right side panel for the section labeled releases. The item displayed there is the latest full release. As of now, they are beta releases.
 
 ## Getting involved
 

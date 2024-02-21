@@ -1,14 +1,15 @@
-import concurrent
 import multiprocessing
 import os
 import threading
-from concurrent import futures
 import pickle
-
 import numpy as np
-
 import neurons as n
 from typing import List
+
+"""
+!!!IMPORTANT NOT!!!
+nearly all constants will be made a hyperparameter for beta release and full releases
+"""
 
 
 # global functions for efficient multi-threading/multi-coring
