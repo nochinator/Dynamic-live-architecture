@@ -114,10 +114,10 @@ This will result in slower training, but at least we can train it.
 
 ##### What about the backpropagation system?
 
-The backpropagation system from the beta branch doesn't work with the new position system. 
+The backpropagation system from the beta branch doesn't work with the new position system, at least not yet.
 The entire thing was based on the idea that users defined which neurons could and could not be connected to, but the 
-positioning system doesn't have this capability. 
-We could do it based on which neurons are nearby, but that would be excessively slow.
+positioning system doesn't do this. 
+We could do it based on which neurons are nearby, but that would be excessively slow due to all the recurrences.
 If you can come up with a way to do this, then please open an issue explaining it.
 
 ## Why is this useful/important?

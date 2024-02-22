@@ -53,13 +53,10 @@ class NeuralNetwork:
         # give input, firing inputs before priming others reduces reaction speed by one cycle with no downside
         for i, neuron in enumerate(self.input_neurons):
             neuron.fire(np.float32(inputs[i]))
-        print("input ready")
 
         # Iterate over neurons and create a thread for each
         for neuron in self.internal_neurons:
             prime_neuron(neuron)
-
-        print("primed")
 
         # Empty list to hold threads from firing
         threads = []
@@ -73,12 +70,10 @@ class NeuralNetwork:
         # Wait for all threads to complete
         for thread in threads:
             thread.join()
-        print("fired")
 
         # collect outputs
         for neuron in self.output_neurons:
             outputs.append(neuron.output)
-        print("outputing")
         return outputs
 
 

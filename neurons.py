@@ -1,5 +1,4 @@
 import numpy as np
-import random
 
 """
 !!!IMPORTANT NOT!!!
@@ -26,7 +25,7 @@ class InputNeuron:
 
 
 class HiddenNeuron:
-    def __init__(self, memory_slots: int, position: tuple, learning_rate=np.float32(0.1)):
+    def __init__(self, memory_slots: int, position: tuple[float, float], learning_rate=np.float32(0.1)):
         """
         Create a hidden neuron.
         :param position: the starting position of the hidden neuron, the neuron will move around
@@ -62,7 +61,7 @@ class HiddenNeuron:
         distances = self.get_distances()
 
         # Initialize synaptic weights with random values
-        self.synaptic_weights = np.where(distances <= 1, np.random.uniform(0, 1, len(distances)), 0)
+        self.synaptic_weights = np.where(distances <= 1, np.random.uniform(0, 1, len(network)), 0)
 
         # Normalize weights to sum up to 1
         total_weight = np.sum(self.synaptic_weights)
@@ -72,6 +71,9 @@ class HiddenNeuron:
         # setup self.input_memory
         self.input_memory = np.zeros((len(self.output_memory), len(self.network)), dtype=np.float32)
 
+        print(self.network)  # prints 1000 items, this is correct
+
+
     def prime(self):
         """
         Always call before firing the neurons in the network, will get inputs auto-magically
@@ -80,7 +82,7 @@ class HiddenNeuron:
         # get inputs
         self.inputs = np.array([neuron.output for neuron in self.network], dtype=np.float32)
 
-        self.inputs = np.reshape(self.inputs, (1, len(self.network)))  # Reshape inputs to match input_memory
+        print(self.network)  # prints one item, this is incorrect
 
         # update memory
         self.input_memory[self.memory_index] = self.inputs
@@ -92,11 +94,12 @@ class HiddenNeuron:
         training after every fire is recommended
         :return: None, get the output from neuron.output
         """
+
         # calculate output
-        self.output = np.dot(self.inputs, self.synaptic_weights)
+        self.output = np.dot(self.inputs, self.synaptic_weights)[0]
 
         # update memory
-        self.output_memory[self.memory_index] = self.output
+        self.output_memory[self.memory_index] = self.output[0]
 
         # update memory position
         self.memory_index = (self.memory_index + 1) % len(self.output_memory)
@@ -152,7 +155,7 @@ class HiddenNeuron:
 
 
 class AnchorNeuron:
-    def __init__(self, memory_slots: int, position: tuple, learning_rate=np.float32(0.1)):
+    def __init__(self, memory_slots: int, position: tuple[float, float], learning_rate=np.float32(0.1)):
         """
         Create an anchor neuron.
         :param position: the starting position of the hidden neuron, the neuron will NOT move around
