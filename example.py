@@ -1,6 +1,5 @@
 import time
 import DLA_Library
-import numpy as np
 import cProfile
 
 # !!!! IMPORTANT !!!
@@ -10,10 +9,10 @@ import cProfile
 # XOR data
 X_train = [[0, 0], [0, 1], [1, 1], [1, 0]]
 y_train = [[0], [1], [0], [1]]
-learning_rate = np.float32(0.1)
+learning_rate = 0.1
 
 # Create neurons
-input_neurons = [DLA_Library.InputNeuron((0, 0))]
+input_neurons = [DLA_Library.InputNeuron(0, (0, 0))]
 hidden_neurons = [DLA_Library.ActiveNeuron(i, (0, 1), learning_rate) for i in range(999)]
 output_neurons = [DLA_Library.ActiveNeuron(1000, (0, 2), learning_rate)]
 network = input_neurons + hidden_neurons + output_neurons
@@ -23,7 +22,7 @@ for neuron in hidden_neurons + output_neurons:
     neuron.initialize_neuron(network)
 
 # create the network manager for easier usage of neurons
-neural_network = DLA_Library.NeuralNetwork(input_neurons, hidden_neurons, output_neurons,50)
+neural_network = DLA_Library.NeuralNetwork(input_neurons, hidden_neurons, output_neurons, 50)
 
 
 # Function to make predictions
@@ -43,7 +42,7 @@ def make_predictions(X, duration):
 
 # Perform predictions for 10 seconds
 duration = 10
-make_predictions(X_train[1], duration)
-#cProfile.run('make_predictions(X_train[1], duration)')
+#make_predictions(X_train[1], duration)
+cProfile.run('make_predictions(X_train[1], duration)')
 
 

@@ -10,30 +10,32 @@ unless explicitly stated or the value is 0/None or in most cases 1
 
 
 class InputNeuron:
-    def __init__(self, position: tuple[float, float]):
+    def __init__(self, neuron_number: int, position: tuple[float, float]):
         """
         Create an input neuron, will only provide input to rest of network, does not do any processing on the data.
-        :param position: The initial position of the input neuron; will not move from this position.
+        :param neuron_number: Unique identifier for this neuron, numbered in order of creation; start at 0.
+        :param position: The initial position of the input neuron, will not move from this position.
         Note: Neuron number is not saved, but should still be counted. Start at 0 (0, 1, 2, 3...) like list indexes.
         """
+        self.number = neuron_number
         self.position = position
-        self.output = np.float32(0)
+        self.output = 0
 
-    def fire(self, output: np.float32):
+    def fire(self, output: float):
         """
         Does not do any processing, simply sets its output to the input.
         :param output: The output this neuron should provide.
         :return: None; get the output from neuron.output.
         """
-        self.output = output
+        return output
 
 
 class ActiveNeuron:
     def __init__(self, neuron_number: int, position: tuple[float, float], learning_rate:
-                 np.float32):
+                 float):
         """
         Create a hidden neuron.
-        :param neuron_number: Unique identifier for this neuron, neurons must be numbered in order of creation.
+        :param neuron_number: Unique identifier for this neuron, numbered in order of creation, start at 0.
         :param position: The starting position of the hidden neuron.
         :param learning_rate: How quickly to change the weights when training.
         """
@@ -43,14 +45,15 @@ class ActiveNeuron:
         self.position = position
 
         # Prep variables for use
-        self.output = np.float32(0)
-        self.memory = None
         self.memory_index = 0
         self.network = None
         self.synaptic_weights = None
 
     def get_distances(self):
-        # calculates the distance between every other neuron (including self) and the
+        """
+        Internal function that gets distances to every other neuron in the network.
+        :return: Array of distances to each neuron in network
+        """
         return np.linalg.norm(np.array(self.position) - np.array([neuron.position for neuron in self.network]), axis=1)
 
     def initialize_neuron(self, network):
@@ -82,19 +85,19 @@ class ActiveNeuron:
 
         Training after every fire is recommended.
         :param state: List of output from every neuron in the network IN NUMERICAL ORDER.
-        :return: None; get the output from neuron.output
+        :return: Output
         """
         # calculate output
-        self.output = np.dot(state, self.synaptic_weights)
+        return np.dot(state, self.synaptic_weights)
 
     def train(self, positions: List[tuple[float, float]], context: List[float], reward: float):
         """
         Use hebbian learning to train the weights in the network and move the neurons around.
-        :param positions: array filled with tuples which are the positions of every neuron in the network
-        :param context: An array of outputs from every neuron, averaged
-        :param reward: The reward for the actions, acts as a simple scalar for weight changes. Positive or Negative
-        :return: None
-        note: context_size + cycle may NOT be more than (but can be equal to) the number of memory slots
+        :param positions: Array filled with tuples which are the positions of every neuron in the network.
+        :param context: An array of outputs from every neuron, averaged.
+        :param reward: The reward for the actions, acts as a simple scalar for weight changes; positive or negative.
+        :return: None.
+        note: context_size + cycle may NOT be more than (but can be equal to) the number of memory slots.
         """
         distances = self.get_distances()
 
@@ -139,13 +142,14 @@ class NeuralNetwork:
         self.hidden_neurons = hidden_neurons
         self.output_neurons = output_neurons
         self.internal_neurons = hidden_neurons + output_neurons
-        self.network = input_neurons + hidden_neurons + output_neurons
+        self.network = sorted(input_neurons + hidden_neurons + output_neurons, key=lambda x: x.number)
 
         # setup self.input_memory
         self.memory = np.zeros((memory_slots, len(self.network)), dtype=np.float32)
         self.memory_index = 0
+        self.network_state = []
 
-    def propagate_input(self, inputs: List[np.float32]) -> List[float]:
+    def propagate_input(self, inputs: List[float]) -> List[float]:
         """
         Provide inputs for the entire network and propagate them through the entire network.
         :param inputs: Array of shape *number of input neurons*.
@@ -153,23 +157,25 @@ class NeuralNetwork:
         """
         outputs = []
 
-        # firing input neurons before building the state reduces reaction delay by 1 cycle at with disadvantage
-        for i, neuron in enumerate(self.input_neurons):
-            neuron.fire(inputs[i])
+        current_state = []
 
-        state = []
+        # step 1: fire every neuron based on the state of the network, building state for next cycle as it goes
+        i = 0
         for neuron in self.network:
-            state.append(neuron.output)
-        for neuron in self.internal_neurons:
-            neuron.fire(state)
+            if neuron is not InputNeuron:
+                current_state.append(neuron.fire(self.network_state))
+            else:
+                current_state.append(neuron.fire(inputs[i]))
+                i += 1
 
-        # collect outputs
+        # step 2: collect outputs, update memory, and update network state
         for neuron in self.output_neurons:
-            outputs.append(neuron.output)
+            outputs.append(current_state[neuron.number])
 
-        # update memory
-        self.memory[self.memory_index] = state
+        self.memory[self.memory_index] = current_state
         self.memory_index = (self.memory_index + 1) % len(self.memory)
+
+        self.network_state = current_state
 
         return outputs
 
