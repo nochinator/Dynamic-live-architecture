@@ -1,6 +1,7 @@
 import time
 import DLA_Library
 import numpy as np
+import cProfile
 
 # !!!! IMPORTANT !!!
 # This file will be completely re-made after re-implementation
@@ -13,8 +14,8 @@ learning_rate = np.float32(0.1)
 
 # Create neurons
 input_neurons = [DLA_Library.InputNeuron((0, 0))]
-hidden_neurons = [DLA_Library.ActiveNeuron(i, (0, 1), learning_rate, True) for i in range(999)]
-output_neurons = [DLA_Library.ActiveNeuron(1000, (0, 2), learning_rate, False)]
+hidden_neurons = [DLA_Library.ActiveNeuron(i, (0, 1), learning_rate) for i in range(999)]
+output_neurons = [DLA_Library.ActiveNeuron(1000, (0, 2), learning_rate)]
 network = input_neurons + hidden_neurons + output_neurons
 
 # Initialize connections
@@ -33,15 +34,16 @@ def make_predictions(X, duration):
 
     while time.time() < end_time:
         neural_network.propagate_input(X)
-        # neural_network.train(0, 10, 1)
+        #neural_network.train(0, 10, 1)
         predictions_made += 1
 
-    return predictions_made
+    print(predictions_made)
+    print(predictions_made / 10)
 
 
 # Perform predictions for 10 seconds
 duration = 10
-total_predictions = make_predictions(X_train[1], duration)
+make_predictions(X_train[1], duration)
+#cProfile.run('make_predictions(X_train[1], duration)')
 
-print(total_predictions)
-print(total_predictions / 10)
+

@@ -17,49 +17,20 @@ Below is an overview of how the internals currently work.
 ### Input Propagation
 
 A function similar to this is included in every neural network framework that I can find. 
-The two functions below are called on every neuron, first priming, then firing.
-
-#### Priming
-
-This step involves the neuron fetching its inputs from each connected neuron.
-We can't retrieve inputs when firing neurons, 
-as doing so could cause issues with the data that the neurons receive, depending on the network structure.
-
-#### Firing
-
-Each neuron in the network undergoes firing, which entails taking the dot product of the weights stored in the 
-neuron and the inputs obtained during the priming step.
+This used to be two functions, but now it's only one.
+First the input for the network is given to the input neurons.
+Input neurons don't actually do any processing. This is simply how data gets into to the network.
+Each neuron in the network will receive a list of the outputs of every neuron in the network.
+We multiply the outputs of the network by the weights stored in the neuron.
 We do not use an activation function as non-linearity is introduced in the structure of the network.
 After every neuron has fired, the output of each neuron in the output layer is collected into an array and returned.
+This is a much simpler and more performant method from the old system.
 
 ### Training
 
 This is one of the biggest differences from other networks. 
 We currently only support reinforcement, but this could change if someone can figure out how to implement gradient 
 decent training in this framework.
-
-#### Meet the neurons
-
-To understand how training works, you need to know the three types of neurons: Input, Hidden, and Output.
-
-##### Input Neurons
-
-Input neurons take a single value in, then set that value as the output. 
-They serve as a compatibility layer, giving each input a position in the network.
-They do not move around.
-
-##### Hidden Neurons
-
-The Main part of the network. 
-These neurons will move around as they train, and perform dot product-ing to produce the output.
-No activation function is used as non-linearity comes from the non-linear structure of the network.
-
-##### Anchor Neurons
-
-Works the same as the hidden neurons; however, it will not move itself, it will only move other neurons.
-This gives the hidden neurons a base, then they build around the anchor neurons.
-Anchor neurons are often used for the outputs, and, when implemented, will be used in the feed-forward portion of 
-the network.
 
 #### Hebbian Learning
 
@@ -85,14 +56,14 @@ This prevents massive or tiny weights and improves stability.
 
 So now we can train towards a desired value, but how do we know if two neurons should be connected or not? 
 Well, we could just say that every neuron is connected, but then we would form too many connections, so we have a 
-positioning system and only neurons that are nearby can connect.
+positioning system where only neurons that are nearby can connect.
 
 #### Moving Neurons Around
 
 Now that neurons can only connect to nearby neurons, it only makes sense that neurons can move around to form complex 
 structures and adapt the structure of the network. 
 To do this, we get the direction of every connection, and both of the neurons connected are pulled together. 
-This is done for every neuron so after normalizing weights.
+This is done for every neuron after normalizing weights.
 
 #### Addressing the delayed reaction problems
 
@@ -108,17 +79,18 @@ This embedded network will fire using the traditional method before the rest of 
 
 The second problem is a lot harder to solve.
 When we go to train the network, we don't know what input and output data to refer to.
-To help solve this, we keep a memory log of all the inputs the neuron receives and all the outputs it gives.
-But we still don't know what output/input to refer to, so we take an average of the past x predictions. 
-This will result in slower training, but at least we can train it.
+To help solve this, we keep a memory log of all the outputs of all the neurons.
+But we still don't know what output/input to refer to, so we take an average of the past x predictions starting at y, 
+where x and y are hyperparameters. 
+This will result in slower training, but at least we can train it towards a desired output.
 
 ##### What about the backpropagation system?
 
 The backpropagation system from the beta branch doesn't work with the new position system, at least not yet.
 The entire thing was based on the idea that users defined which neurons could and could not be connected to, but the 
 positioning system doesn't do this. 
-We could do it based on which neurons are nearby, but that would be excessively slow due to all the recurrences.
-If you can come up with a way to do this, then please open an issue explaining it.
+Even if we did make it work with the position system, it would be extremely slow due to recurrent nature of the network.
+If you can come up with a way to do this efficiently, then please open an issue explaining it.
 
 ## Why is this useful/important?
 

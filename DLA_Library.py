@@ -1,6 +1,5 @@
-import numpy as np
-import os
 import pickle
+import numpy as np
 from typing import List
 
 """
@@ -31,19 +30,17 @@ class InputNeuron:
 
 class ActiveNeuron:
     def __init__(self, neuron_number: int, position: tuple[float, float], learning_rate:
-    np.float32, mobile_neuron: bool):
+                 np.float32):
         """
         Create a hidden neuron.
         :param neuron_number: Unique identifier for this neuron, neurons must be numbered in order of creation.
         :param position: The starting position of the hidden neuron.
         :param learning_rate: How quickly to change the weights when training.
-        :param mobile_neuron: Weather or not the neurons should move. Stationary neurons are often used for output.
         """
         # Save values of initialization
         self.number = neuron_number
         self.learning_rate = learning_rate
         self.position = position
-        self.mobility = mobile_neuron
 
         # Prep variables for use
         self.output = np.float32(0)
@@ -90,9 +87,10 @@ class ActiveNeuron:
         # calculate output
         self.output = np.dot(state, self.synaptic_weights)
 
-    def train(self, context: List[float], reward: float):
+    def train(self, positions: List[tuple[float, float]], context: List[float], reward: float):
         """
         Use hebbian learning to train the weights in the network and move the neurons around.
+        :param positions: array filled with tuples which are the positions of every neuron in the network
         :param context: An array of outputs from every neuron, averaged
         :param reward: The reward for the actions, acts as a simple scalar for weight changes. Positive or Negative
         :return: None
@@ -101,45 +99,30 @@ class ActiveNeuron:
         distances = self.get_distances()
 
         # Update synaptic weights
-        for i, weight in enumerate(self.synaptic_weights):
-            if distances[i] < 1 or weight > 0.01:  # 1 is hyperparameter
-                # Apply Hebbian-like learning rule to synaptic weights
-                weight += self.learning_rate * context[i] * context[self.number] * reward
+        mask = (distances < 1) & (self.synaptic_weights > 0.01)  # Use bitwise AND for element-wise comparison
+        self.synaptic_weights[mask] += self.learning_rate * context[mask] * context[self.number] * reward
 
-                # Ensure non-negative weights
-                self.synaptic_weights[i] = max(np.float32(0), weight)
+        # Ensure non-negative weights
+        self.synaptic_weights[self.synaptic_weights < 0] = 0
 
-        # set weight for self to 0
+        # Set weight for self to 0
         self.synaptic_weights[self.number] = 0
 
         # Normalize weights to add up to 1
-        total_weight = sum(self.synaptic_weights)
-        self.synaptic_weights /= total_weight
+        self.synaptic_weights /= np.sum(self.synaptic_weights)
 
         # move neurons
-        if self.mobility:
-            for i, neuron in enumerate(self.network):
-                # Calculate vectors
-                vector1 = np.array(neuron.position) - np.array(self.position)
-                vector2 = np.array(self.position) - np.array(neuron.position)
+        # calculate directions
+        vectors = positions - np.array(self.position)
+        # normalize
+        norms = np.linalg.norm(vectors, axis=1)
+        # scale vectors
+        scaled_vectors = np.where(norms != 0, (vectors.T / norms) * self.synaptic_weights, 0)
 
-                # Normalize and scale vectors
-                norm_vector1 = (vector1 / np.linalg.norm(vector1)) * self.synaptic_weights[i]
-                norm_vector2 = (vector2 / np.linalg.norm(vector2)) * self.synaptic_weights[i]
+        new_positions = positions + scaled_vectors.T
 
-                # Move neurons
-                self.position = tuple(np.array(self.position) + norm_vector1)
-                neuron.position = tuple(np.array(neuron.position) + norm_vector2)
-        else:
-            for i, neuron in enumerate(self.network):
-                # Calculate vectors
-                vector2 = np.array(self.position) - np.array(neuron.position)
-
-                # Normalize and scale vectors
-                norm_vector2 = (vector2 / np.linalg.norm(vector2)) * self.synaptic_weights[i]
-
-                # Move neurons
-                neuron.position = tuple(np.array(neuron.position) + norm_vector2)
+        for i, neuron in enumerate(self.network):
+            neuron.position = tuple(new_positions[i])
 
 
 class NeuralNetwork:
@@ -204,12 +187,15 @@ class NeuralNetwork:
         # Prepare to get context
         start_index = (self.memory_index - cycle) % len(self.memory)
 
-        # Actually get context
+        # Actually get context and average each section
         context = np.sum(self.memory[start_index: start_index + context_size: -1], axis=0) / context_size
+
+        # Get positions
+        positions = np.array([neuron.position for neuron in self.network])
 
         # train each output neuron with the parameters
         for neuron in self.internal_neurons:
-            neuron.train(context, reward)
+            neuron.train(positions, context, reward)
 
     def save_model(self, file_path):
         """
