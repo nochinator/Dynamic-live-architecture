@@ -13,8 +13,8 @@ learning_rate = 0.1
 
 # Create neurons
 input_neurons = [DLA_Library.InputNeuron(0, (0, 0))]
-hidden_neurons = [DLA_Library.ActiveNeuron(i, (0, 1), learning_rate) for i in range(999)]
-output_neurons = [DLA_Library.ActiveNeuron(1000, (0, 2), learning_rate)]
+hidden_neurons = [DLA_Library.ActiveNeuron(i, (0, 1), learning_rate) for i in range(4999)]
+output_neurons = [DLA_Library.ActiveNeuron(5000, (0, 2), learning_rate)]
 network = input_neurons + hidden_neurons + output_neurons
 
 # Initialize connections
@@ -27,12 +27,14 @@ neural_network = DLA_Library.NeuralNetwork(input_neurons, hidden_neurons, output
 
 # Function to make predictions
 def make_predictions(X, duration):
+    neural_network.propagate_input(X)
+    neural_network.train(0, 50, 1)
     start_time = time.time()
     end_time = start_time + duration
     predictions_made = 0
 
     while time.time() < end_time:
-        #neural_network.propagate_input(X)
+        neural_network.propagate_input(X)
         neural_network.train(0, 50, 1)
         predictions_made += 1
 

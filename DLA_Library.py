@@ -1,6 +1,5 @@
 import concurrent.futures
 import pickle
-from numba import njit
 import numpy as np
 from typing import List
 
@@ -173,15 +172,19 @@ class NeuralNetwork:
             current_state[neuron.number] = neuron.fire(output)
 
         # compute update for each neuron in parallel
-        def compute_neuron_state(neuron):
-            current_state[neuron.number] = neuron.fire(self.network_state)
+        def compute_prediction_batch(batch):
+            for neuron in batch:
+                current_state[neuron.number] = neuron.fire(self.network_state)
 
-        # Create a thread pool executor
+        # divide neurons into batches
+        batch_size = 500 # Adjust as needed
+        batches = [self.internal_neurons[i:i + batch_size] for i in range(0, len(self.internal_neurons), batch_size)]
+
+        # perform calculations in parallel
         with concurrent.futures.ThreadPoolExecutor() as executor:
-            # Submit tasks for computing the state of each internal neuron
-            executor.map(compute_neuron_state, self.internal_neurons)
+            executor.map(compute_prediction_batch, batches)
 
-        # step 2: collect outputs, update memory, and update network state
+        # collect outputs, update memory, and update network state
         self.memory[self.memory_index] = current_state
         self.memory_index = (self.memory_index + 1) % len(self.memory)
 
@@ -210,13 +213,17 @@ class NeuralNetwork:
         positions = np.array([neuron.position for neuron in self.network])
 
         # Train in parallel
-        def compute_training(neuron):
-            neuron.train(positions, context, reward)
+        def compute_training_batch(batch):
+            for neuron in batch:
+                neuron.train(positions, context, reward)
 
-        # Create a thread pool executor
+        # divide neurons into batches
+        batch_size = 500
+        batches = [self.internal_neurons[i:i + batch_size] for i in range(0, len(self.internal_neurons), batch_size)]
+
+        # perform calculations in parallel
         with concurrent.futures.ThreadPoolExecutor() as executor:
-            # Submit tasks for computing the state of each internal neuron
-            executor.map(compute_training, self.internal_neurons)
+            executor.map(compute_training_batch, batches)
 
     def save_model(self, file_path):
         """
