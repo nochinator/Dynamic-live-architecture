@@ -12,9 +12,9 @@ y_train = [[0], [1], [0], [1]]
 learning_rate = 0.1
 
 # Create neurons
-input_neurons = [DLA_Library.InputNeuron(0, (0, 0))]
-hidden_neurons = [DLA_Library.ActiveNeuron(i, (0, 1), learning_rate) for i in range(4999)]
-output_neurons = [DLA_Library.ActiveNeuron(5000, (0, 2), learning_rate)]
+input_neurons = [DLA_Library.InputNeuron(i, (0, 0)) for i in range(10000)]
+hidden_neurons = [DLA_Library.ActiveNeuron(i + 10000, (0, 1), learning_rate) for i in range(10000)]
+output_neurons = [DLA_Library.ActiveNeuron(i + 20000, (0, 2), learning_rate) for i in range(25)]
 network = input_neurons + hidden_neurons + output_neurons
 
 # Initialize connections
@@ -28,7 +28,7 @@ neural_network = DLA_Library.NeuralNetwork(input_neurons, hidden_neurons, output
 # Function to make predictions
 def make_predictions(X, duration):
     neural_network.propagate_input(X)
-    neural_network.train(0, 50, 1)
+    #neural_network.train(0, 50, 1)
     start_time = time.time()
     end_time = start_time + duration
     predictions_made = 0

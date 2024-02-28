@@ -1,4 +1,5 @@
 import concurrent.futures
+import os
 import pickle
 import numpy as np
 from typing import List
@@ -150,12 +151,12 @@ class NeuralNetwork:
         self.internal_neurons = hidden_neurons + output_neurons
         self.network = sorted(input_neurons + hidden_neurons + output_neurons, key=lambda x: x.number)
 
-        # setup self.input_memory
+        # setup variables for use
         self.memory = np.zeros((memory_slots, len(self.network)))
         self.memory_index = 0
         self.network_state = np.zeros((len(self.network)))
-
-
+        self.input_batch_size = int(np.ceil(len(self.input_neurons) / os.cpu_count()))
+        self.internal_batch_size = int(np.ceil(len(self.internal_neurons) / os.num_cores))
 
     def propagate_input(self, inputs: List[float]) -> List[float]:
         """
@@ -167,18 +168,27 @@ class NeuralNetwork:
 
         current_state = np.zeros(len(self.network))
 
-        # Handle input neurons separately
-        for output, neuron in zip(inputs, self.input_neurons):
-            current_state[neuron.number] = neuron.fire(output)
+        # Handle input neurons
+        def fire_input_neurons(neuron_input):
+            neuron, input_value = neuron_input
+            current_state[neuron.number] = neuron.fire(input_value)
+
+        # divide neurons into batches based on number of cores on cpu and number of neurons
+        batches = [self.input_neurons[i:i + self.input_batch_size] for i in range(0, len(self.input_neurons),
+                                                                                  self.input_batch_size)]
+
+        # Perform calculations in parallel
+        with concurrent.futures.ThreadPoolExecutor() as executor:
+            executor.map(fire_input_neurons, zip(batches, inputs))
 
         # compute update for each neuron in parallel
         def compute_prediction_batch(batch):
             for neuron in batch:
                 current_state[neuron.number] = neuron.fire(self.network_state)
 
-        # divide neurons into batches
-        batch_size = 500 # Adjust as needed
-        batches = [self.internal_neurons[i:i + batch_size] for i in range(0, len(self.internal_neurons), batch_size)]
+        # divide neurons into batches based on number of cores on cpu and number of neurons
+        batches = [self.internal_neurons[i:i + self.internal_batch_size] for i in range(0, len(self.internal_neurons),
+                                                                                        self.internal_batch_size)]
 
         # perform calculations in parallel
         with concurrent.futures.ThreadPoolExecutor() as executor:
@@ -217,9 +227,9 @@ class NeuralNetwork:
             for neuron in batch:
                 neuron.train(positions, context, reward)
 
-        # divide neurons into batches
-        batch_size = 500
-        batches = [self.internal_neurons[i:i + batch_size] for i in range(0, len(self.internal_neurons), batch_size)]
+        # divide neurons into batches based on number of cores on cpu and number of neurons
+        batches = [self.internal_neurons[i:i + self.internal_batch_size] for i in range(0, len(self.internal_neurons),
+                                                                                        self.internal_batch_size)]
 
         # perform calculations in parallel
         with concurrent.futures.ThreadPoolExecutor() as executor:
