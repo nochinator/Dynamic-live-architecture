@@ -32,8 +32,8 @@ def make_predictions(X, duration):
     predictions_made = 0
 
     while time.time() < end_time:
-        neural_network.propagate_input(X)
-        #neural_network.train(0, 10, 1)
+        #neural_network.propagate_input(X)
+        neural_network.train(0, 50, 1)
         predictions_made += 1
 
     print(predictions_made)
@@ -42,7 +42,7 @@ def make_predictions(X, duration):
 
 # Perform predictions for 10 seconds
 duration = 10
-#make_predictions(X_train[1], duration)
-cProfile.run('make_predictions(X_train[1], duration)')
+make_predictions(X_train[1], duration)
+#cProfile.run('make_predictions(X_train[1], duration)')
 
 

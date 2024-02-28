@@ -1,4 +1,6 @@
+import concurrent.futures
 import pickle
+from numba import njit
 import numpy as np
 from typing import List
 
@@ -31,8 +33,7 @@ class InputNeuron:
 
 
 class ActiveNeuron:
-    def __init__(self, neuron_number: int, position: tuple[float, float], learning_rate:
-                 float):
+    def __init__(self, neuron_number: int, position: tuple[float, float], learning_rate: float):
         """
         Create a hidden neuron.
         :param neuron_number: Unique identifier for this neuron, numbered in order of creation, start at 0.
@@ -68,8 +69,8 @@ class ActiveNeuron:
         distances = self.get_distances()
 
         # Initialize synaptic weights with random values
-        self.synaptic_weights = np.zeros(len(self.network))
-        self.synaptic_weights = np.where(distances <= 1, np.random.uniform(0, 1), 0)
+        self.synaptic_weights = np.random.uniform(0, 1, len(self.network))
+        self.synaptic_weights[distances > 1] = 0
 
         # set weight for self to 0
         self.synaptic_weights[self.number] = 0
@@ -102,7 +103,7 @@ class ActiveNeuron:
         distances = self.get_distances()
 
         # Update synaptic weights
-        mask = (distances < 1) & (self.synaptic_weights > 0.01)  # Use bitwise AND for element-wise comparison
+        mask = (0 < distances) and (distances < 1) or (self.synaptic_weights > 0.01)  # Use bitwise AND for element-wise comparison
         self.synaptic_weights[mask] += self.learning_rate * context[mask] * context[self.number] * reward
 
         # Ensure non-negative weights
@@ -115,17 +116,23 @@ class ActiveNeuron:
         self.synaptic_weights /= np.sum(self.synaptic_weights)
 
         # move neurons
-        # calculate directions
-        vectors = positions - np.array(self.position)
-        # normalize
+        # Exclude near zero weights
+        valid_indices = np.where(self.synaptic_weights > 0.01)[0]
+
+        # Calculate vectors
+        vectors = np.array(self.position) - positions[valid_indices]
+
+        # Normalize vectors
         norms = np.linalg.norm(vectors, axis=1)
-        # scale vectors
-        scaled_vectors = np.where(norms != 0, (vectors.T / norms) * self.synaptic_weights, 0)
+        normalized_vectors = vectors / norms[:, np.newaxis]
 
-        new_positions = positions + scaled_vectors.T
+        # Scale vectors
+        scaled_vectors = normalized_vectors * self.synaptic_weights[:, np.newaxis]
 
-        for i, neuron in enumerate(self.network):
-            neuron.position = tuple(new_positions[i])
+        # Sum vectors
+        total_scaled_vector = np.sum(scaled_vectors, axis=0)
+
+        self.position += total_scaled_vector
 
 
 class NeuralNetwork:
@@ -145,9 +152,11 @@ class NeuralNetwork:
         self.network = sorted(input_neurons + hidden_neurons + output_neurons, key=lambda x: x.number)
 
         # setup self.input_memory
-        self.memory = np.zeros((memory_slots, len(self.network)), dtype=np.float32)
+        self.memory = np.zeros((memory_slots, len(self.network)))
         self.memory_index = 0
-        self.network_state = []
+        self.network_state = np.zeros((len(self.network)))
+
+
 
     def propagate_input(self, inputs: List[float]) -> List[float]:
         """
@@ -157,21 +166,22 @@ class NeuralNetwork:
         """
         outputs = []
 
-        current_state = []
+        current_state = np.zeros(len(self.network))
 
-        # step 1: fire every neuron based on the state of the network, building state for next cycle as it goes
-        i = 0
-        for neuron in self.network:
-            if neuron is not InputNeuron:
-                current_state.append(neuron.fire(self.network_state))
-            else:
-                current_state.append(neuron.fire(inputs[i]))
-                i += 1
+        # Handle input neurons separately
+        for output, neuron in zip(inputs, self.input_neurons):
+            current_state[neuron.number] = neuron.fire(output)
+
+        # compute update for each neuron in parallel
+        def compute_neuron_state(neuron):
+            current_state[neuron.number] = neuron.fire(self.network_state)
+
+        # Create a thread pool executor
+        with concurrent.futures.ThreadPoolExecutor() as executor:
+            # Submit tasks for computing the state of each internal neuron
+            executor.map(compute_neuron_state, self.internal_neurons)
 
         # step 2: collect outputs, update memory, and update network state
-        for neuron in self.output_neurons:
-            outputs.append(current_state[neuron.number])
-
         self.memory[self.memory_index] = current_state
         self.memory_index = (self.memory_index + 1) % len(self.memory)
 
@@ -199,9 +209,14 @@ class NeuralNetwork:
         # Get positions
         positions = np.array([neuron.position for neuron in self.network])
 
-        # train each output neuron with the parameters
-        for neuron in self.internal_neurons:
+        # Train in parallel
+        def compute_training(neuron):
             neuron.train(positions, context, reward)
+
+        # Create a thread pool executor
+        with concurrent.futures.ThreadPoolExecutor() as executor:
+            # Submit tasks for computing the state of each internal neuron
+            executor.map(compute_training, self.internal_neurons)
 
     def save_model(self, file_path):
         """
