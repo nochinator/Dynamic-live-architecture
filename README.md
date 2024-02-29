@@ -18,13 +18,13 @@ Below is an overview of how the internals currently work.
 
 A function similar to this is included in every neural network framework that I can find. 
 This used to be two functions, but now it's only one.
-First the input for the network is given to the input neurons.
-Input neurons don't actually do any processing. This is simply how data gets into to the network.
+First, the input for the network is given to the input neurons.
+Input neurons don't do any processing.
+This is simply how data gets into to the network.
 Each neuron in the network will receive a list of the outputs of every neuron in the network.
 We multiply the outputs of the network by the weights stored in the neuron.
 We do not use an activation function as non-linearity is introduced in the structure of the network.
 After every neuron has fired, the output of each neuron in the output layer is collected into an array and returned.
-This is a much simpler and more performant method from the old system.
 
 ### Training
 
@@ -36,8 +36,7 @@ decent training in this framework.
 
 To explain the learning mechanism, you must know what hebbian learning is, this can be described as "neurons that 
 fire together, wire together."
-A learning rate value is also applied.
-The following equation is run for every connection.
+It can be represented wit this equation: `weight += learning rate * output of self * output of connected neuron`
 This method is inspired by real, biological neurons.
 
 #### Directing Training
@@ -79,7 +78,7 @@ This embedded network will fire using the traditional method before the rest of 
 
 The second problem is a lot harder to solve.
 When we go to train the network, we don't know what input and output data to refer to.
-To help solve this, we keep a memory log of all the outputs of all the neurons.
+To help solve this, we keep a memory log of the output of every neuron.
 But we still don't know what output/input to refer to, so we take an average of the past x predictions starting at y, 
 where x and y are hyperparameters. 
 This will result in slower training, but at least we can train it towards a desired output.
@@ -89,13 +88,14 @@ This will result in slower training, but at least we can train it towards a desi
 The backpropagation system from the beta branch doesn't work with the new position system, at least not yet.
 The entire thing was based on the idea that users defined which neurons could and could not be connected to, but the 
 positioning system doesn't do this. 
-Even if we did make it work with the position system, it would be extremely slow due to recurrent nature of the network.
+Even if we did make it work with the position system,
+it would be extremely slow due to the recurrent nature of the network.
 If you can come up with a way to do this efficiently, then please open an issue explaining it.
 
 ## Why is this useful/important?
 
 While it has not been tested yet, this could offer some unique advantages over traditional feedforward networks.
-One of the most obvious advantages are capturing both spacial and temporal relationships. 
+One of the most obvious advantages is capturing both spacial and temporal relationships. 
 This is a result of the reaction delay problems, and the fact that data is represented in a simulated space.
 Another more speculative advantage is thinking in a more human way, allowing better interaction with humans.
 

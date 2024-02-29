@@ -21,7 +21,7 @@ class InputNeuron:
         """
         self.number = neuron_number
         self.position = position
-        self.output = 0
+        self.stationary = True
 
     def fire(self, output: float):
         """
@@ -33,17 +33,19 @@ class InputNeuron:
 
 
 class ActiveNeuron:
-    def __init__(self, neuron_number: int, position: tuple[float, float], learning_rate: float):
+    def __init__(self, neuron_number: int, position: tuple[float, float], learning_rate: float, stationary: bool):
         """
         Create a hidden neuron.
-        :param neuron_number: Unique identifier for this neuron, numbered in order of creation, start at 0.
+        :param neuron_number: Unique identifier for this neuron, numbered in order of creation, starts at 0.
         :param position: The starting position of the hidden neuron.
         :param learning_rate: How quickly to change the weights when training.
+        :param stationary: Specifies if this neuron should move; recommended false for outputs.
         """
         # Save values of initialization
         self.number = neuron_number
         self.learning_rate = learning_rate
         self.position = position
+        self.stationary = stationary
 
         # Prep variables for use
         self.memory_index = 0
@@ -89,33 +91,9 @@ class ActiveNeuron:
         :return: Output
         """
         # calculate output
-        return np.dot(state, self.synaptic_weights)
+        return np.tanh(np.dot(state, self.synaptic_weights))
 
-    def train(self, positions: List[tuple[float, float]], context: List[float], reward: float):
-        """
-        Use hebbian learning to train the weights in the network and move the neurons around.
-        :param positions: Array filled with tuples which are the positions of every neuron in the network.
-        :param context: An array of outputs from every neuron, averaged.
-        :param reward: The reward for the actions, acts as a simple scalar for weight changes; positive or negative.
-        :return: None.
-        note: context_size + cycle may NOT be more than (but can be equal to) the number of memory slots.
-        """
-        distances = self.get_distances()
-
-        # Update synaptic weights
-        mask = (0 < distances) and (distances < 1) or (self.synaptic_weights > 0.01)  # Use bitwise AND for element-wise comparison
-        self.synaptic_weights[mask] += self.learning_rate * context[mask] * context[self.number] * reward
-
-        # Ensure non-negative weights
-        self.synaptic_weights[self.synaptic_weights < 0] = 0
-
-        # Set weight for self to 0
-        self.synaptic_weights[self.number] = 0
-
-        # Normalize weights to add up to 1
-        self.synaptic_weights /= np.sum(self.synaptic_weights)
-
-        # move neurons
+    def move(self, positions):
         # Exclude near zero weights
         valid_indices = np.where(self.synaptic_weights > 0.01)[0]
 
@@ -132,7 +110,37 @@ class ActiveNeuron:
         # Sum vectors
         total_scaled_vector = np.sum(scaled_vectors, axis=0)
 
-        self.position += total_scaled_vector
+        if not self.stationary:
+            self.position += total_scaled_vector
+        self.network[valid_indices] -= total_scaled_vector if not self.network[valid_indices].stationary else 0
+
+    def reinforce(self, positions: List[tuple[float, float]], context: List[float], reward: float):
+        """
+        Use hebbian learning to train the weights in the network and move the neurons around.
+        :param positions: Array filled with tuples which are the positions of every neuron in the network.
+        :param context: An array of outputs from every neuron, averaged.
+        :param reward: The reward for the actions, acts as a simple scalar for weight changes; positive or negative.
+        :return: None.
+        note: context_size + cycle may NOT be more than (but can be equal to) the number of memory slots.
+        """
+        distances = self.get_distances()
+
+        # build mask
+        mask = (0 < distances) & (distances < 1) | (self.synaptic_weights > 0.01)
+        # update weights
+        self.synaptic_weights[mask] -= self.learning_rate * context[mask] * (reward - context[self.number])
+
+        # Ensure non-negative weights
+        #self.synaptic_weights[self.synaptic_weights < 0] = 0
+
+        # Set weight for self to 0
+        self.synaptic_weights[self.number] = 0
+
+        # Normalize weights to add up to 1
+        #self.synaptic_weights /= np.sum(self.synaptic_weights)
+
+        # move neurons
+        self.move(positions)
 
 
 class NeuralNetwork:
@@ -156,7 +164,11 @@ class NeuralNetwork:
         self.memory_index = 0
         self.network_state = np.zeros((len(self.network)))
         self.input_batch_size = int(np.ceil(len(self.input_neurons) / os.cpu_count()))
-        self.internal_batch_size = int(np.ceil(len(self.internal_neurons) / os.num_cores))
+        self.internal_batch_size = int(np.ceil(len(self.internal_neurons) / os.cpu_count()))
+
+        # Initialize neurons
+        for neuron in self.internal_neurons:
+            neuron.initialize_neuron(self.network)
 
     def propagate_input(self, inputs: List[float]) -> List[float]:
         """
@@ -169,24 +181,15 @@ class NeuralNetwork:
         current_state = np.zeros(len(self.network))
 
         # Handle input neurons
-        def fire_input_neurons(neuron_input):
-            neuron, input_value = neuron_input
+        for neuron, input_value in zip(self.input_neurons, inputs):
             current_state[neuron.number] = neuron.fire(input_value)
-
-        # divide neurons into batches based on number of cores on cpu and number of neurons
-        batches = [self.input_neurons[i:i + self.input_batch_size] for i in range(0, len(self.input_neurons),
-                                                                                  self.input_batch_size)]
-
-        # Perform calculations in parallel
-        with concurrent.futures.ThreadPoolExecutor() as executor:
-            executor.map(fire_input_neurons, zip(batches, inputs))
 
         # compute update for each neuron in parallel
         def compute_prediction_batch(batch):
             for neuron in batch:
                 current_state[neuron.number] = neuron.fire(self.network_state)
 
-        # divide neurons into batches based on number of cores on cpu and number of neurons
+        # divide neurons into batches
         batches = [self.internal_neurons[i:i + self.internal_batch_size] for i in range(0, len(self.internal_neurons),
                                                                                         self.internal_batch_size)]
 
@@ -195,6 +198,8 @@ class NeuralNetwork:
             executor.map(compute_prediction_batch, batches)
 
         # collect outputs, update memory, and update network state
+        for neuron in self.output_neurons:
+            outputs.append(current_state[neuron.number])
         self.memory[self.memory_index] = current_state
         self.memory_index = (self.memory_index + 1) % len(self.memory)
 
@@ -202,7 +207,7 @@ class NeuralNetwork:
 
         return outputs
 
-    def train(self, cycle, context_size, reward):
+    def reinforce(self, cycle, context_size, reward):
         """
         Train the network with hebbian learning.
         :param cycle: Number of cycles back in memory to consider the start of context, 0 is the most recent cycle.
@@ -225,12 +230,11 @@ class NeuralNetwork:
         # Train in parallel
         def compute_training_batch(batch):
             for neuron in batch:
-                neuron.train(positions, context, reward)
+                neuron.reinforce(positions, context, reward)
 
-        # divide neurons into batches based on number of cores on cpu and number of neurons
+        # divide neurons into batches
         batches = [self.internal_neurons[i:i + self.internal_batch_size] for i in range(0, len(self.internal_neurons),
                                                                                         self.internal_batch_size)]
-
         # perform calculations in parallel
         with concurrent.futures.ThreadPoolExecutor() as executor:
             executor.map(compute_training_batch, batches)
